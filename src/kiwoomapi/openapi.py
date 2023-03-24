@@ -498,8 +498,9 @@ class KiwoomAPI(QBaseObject):
     def State(self, *args): pass
 
     @ctracer
-    @pyqtSlot(str)
-    def restart(self, filepath):
+    @pyqtSlot()
+    def restart(self):
+        filepath = os.environ['RUN_FILE_PATH']
         subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
 
     """#################### 메시지서버 ####################"""
