@@ -19,7 +19,7 @@ import trddt
 from kwdataengineer import datamodels
 
 
-from kiwoomtrader32.pyqtclass import *
+from pyqtclass import *
 from kiwoomtrader32.api.openapi import OpenAPI
 from kiwoomtrader32.api import openapi
 
