@@ -2,8 +2,9 @@
 from tests._testenv import *
 from ipylib.datacls import BaseDataClass
 from pyqtclass import *
-from kiwoomapi import openapi
-from kiwoomapi.openapi import KiwoomAPI
+
+import kiwoomapi as openapi
+from kiwoomapi import KiwoomAPI
 
 
 class AppTester(QBaseObject):
