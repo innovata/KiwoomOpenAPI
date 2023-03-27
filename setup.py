@@ -21,4 +21,8 @@ setuptools.setup(
     package_dir={"":"src"},
     packages=setuptools.find_packages(),
     python_requires=">=3.8",
+    install_requires=[
+        'PyQt5', 'pandas',
+        'ipylib', 'trddt', 'pyqtclass', 'kwdataengineer'
+    ],
 )
