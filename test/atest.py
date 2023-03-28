@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from tests._testenv import *
+from test._testenv import *
 from ipylib.datacls import BaseDataClass
 from pyqtclass import *
 
@@ -67,7 +67,7 @@ class kiwoomapi_openapi(AppTester):
     def __init__(self): super().__init__()
     def run(self):
         self.testNo(501)
-        self.testNo(201)
+        self.testNo(402)
 
     """#################### OpenAPI ####################"""
     """로그인-버전처리"""
@@ -496,6 +496,7 @@ class kiwoomapi_openapi(AppTester):
         v = openapi.isMoiServer()
         print(['isMoiServer', v, type(v)])
         if not isinstance(v, bool): raise
+    def test402(self):
 
         v = openapi.get_cash()
         print(['get_cash', v, type(v)])

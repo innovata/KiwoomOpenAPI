@@ -3,11 +3,9 @@ import os, sys, subprocess
 from datetime import datetime, timedelta
 from time import sleep
 import re
-from copy import copy, deepcopy
 import math
 
 
-from PyQt5.QAxContainer import QAxWidget
 from PyQt5.QtCore import *
 import pandas as pd
 
@@ -24,257 +22,8 @@ from kwdataengineer import database
 from kwdataengineer import datamodels
 
 
-
-############################################################
-"""Constants"""
-############################################################
-"""
-# 평가금액 = 현재가 X 수량
-# 매입금액 = 매입가 X 수량
-# 매수수수료 = 매입금액 X 수수료(모의투자 0.0035. 실거래 0.00015)
-# 매도수수료 = 평가금액 X 수수료(모의투자 0.0035. 실거래 0.00015)
-# 수수료합 = 매수수수료(원단위절사) + 매도수수료(원단위절사)
-
-# 당사 수수료 징수는 종목별 매수/매도를 기준으로 하며, 동일종목의 분할매매시는 매수별, 매도별 체결합계금액을 기준으로 산정합니다.
-# 매매수수료는 10원 미만 절사이며, (ex. 3,000원 X 50주 = 150,000원 체결 시, 온라인 매체 매매수수료는 150,000원 X 0.015% = 22.5원 -> 20원 부과)
-# 세금은 원 미만 절사 입니다. (ex. 2,050원 X 50주 = 102,500원 체결 시, 거래세는 102,500원 X 0.23%(코스닥) = 235.75원 -> 235원 부과)
-"""
-
-
-"""거래세"""
-Tax = '0.20%'
-"""수수료"""
-Commission = '0.015%'
-"""거래세+매수/도수수료"""
-Cost = '0.23%'
-
-"""트레이딩종목 최대개수"""
-MAX_REALREG_LIMIT = 100
-
-"""종목당 최대투자금"""
-MAX_TRADE_BUDGET = 10*pow(10,4)
-
-"""키움서버 점검시간"""
-# 월~토: 05:05~05:10
-# 일요일: 04:00~04:30
-
-
-OpenAPI = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
-print({'OpenAPI':OpenAPI})
-# pp.pprint(dir(OpenAPI))
-
-def dynamicCall(*args): return OpenAPI.dynamicCall(*args)
-
-# @ftracer
-def KOA_Functions(func, param): return dynamicCall('KOA_Functions(QString,QString)', [func, param])
-
-############################################################
-"""FunctionalAPIs::로그인-버전처리"""
-############################################################
-
-@ftracer
-def CommConnect(): return dynamicCall('CommConnect()')
-
-@ftracer
-def GetLoginInfo(s): return dynamicCall('GetLoginInfo(QString)', s)
-
-@ftracer
-def GetConnectState(): return dynamicCall('GetConnectState()')
-
-
-############################################################
-"""FunctionalAPIs::기타함수"""
-############################################################
-@ftracer
-def GetBranchCodeName():
-    s = dynamicCall('GetBranchCodeName()')
-    data = re.findall('(\d+)\|([가-힣A-Za-z\s\.]+)', s.strip())
-    df = pd.DataFrame(data, columns=['code','name'])
-    return df.to_dict('records')
-
-@ftracer
-def GetCodeListByMarket(mktcd):
-    s = dynamicCall('GetCodeListByMarket(QString)', [mktcd])
-    codes = s.strip().split(';')
-    codes = [c for c in codes if len(c.strip()) > 0]
-    return codes
-
-# @ftracer
-def GetMasterCodeName(code): return dynamicCall('GetMasterCodeName(QString)', [code])
-
-# @ftracer
-def GetMasterConstruction(code): return dynamicCall('GetMasterConstruction(QString)', [code])
-
-"""전일종가==기준가"""
-# @ftracer
-def GetMasterLastPrice(code):
-    v = dynamicCall('GetMasterLastPrice(QString)', [code])
-    return int(v.strip())
-
-"""상장일"""
-# @ftracer
-def GetMasterListedStockDate(code):
-    s = dynamicCall('GetMasterListedStockDate(QString)', [code])
-    return idatetime.DatetimeParser(s)
-
-# @ftracer
-def GetMasterListedStockCnt(code): return dynamicCall('GetMasterListedStockCnt(QString)', [code])
-
-# @ftracer
-def GetMasterStockState(code):
-    try:
-        s = dynamicCall('GetMasterStockState(QString)', [code])
-        s = s.strip()
-        _m = re.search('증거금(\d+%)', s)
-        # print(_m, _m[1])
-        d = {} if _m is None else {'증거금':_m[1]}
-
-        s = re.sub('증거금(\d+%)', repl='', string=s)
-        # print(s)
-        li = s.split('|')
-        li = [e for e in li if len(e.strip()) > 0]
-        # print(li)
-        if len(li) > 0: d.update({'state1':li})
-        else: pass
-        return d
-    except Exception as e:
-        logger.error(e)
-        return {}
-
-@ftracer
-def GetServerGubun():
-    v = KOA_Functions('GetServerGubun', "")
-    return '모의' if v == '1' else '실전'
-
-"""업종코드목록"""
-@ftracer
-def GetUpjongCode(ujcd):
-    s = KOA_Functions('GetUpjongCode', ujcd)
-    li = s.split('|')
-    li = [e.strip() for e in li if len(e.strip()) > 0]
-    p = re.compile("(\d),(\d+),(.+)")
-    data = []
-    for e in li:
-        m = p.search(e)
-        d = {'mktcd':m[1], 'code':m[2], 'name':m[3].strip()}
-        data.append(d)
-    return data
-
-"""업종이름"""
-@ftracer
-def GetUpjongNameByCode(ujcd): return KOA_Functions('GetUpjongNameByCode', ujcd)
-
-"""ETF 투자유의 종목 여부"""
-# @ftracer
-def IsOrderWarningETF(code):
-    v = KOA_Functions('IsOrderWarningETF', code)
-    return False if v == '0' else True
-
-"""주식 전종목대상 투자유의 종목 여부"""
-# @ftracer
-def IsOrderWarningStock(code):
-    v = KOA_Functions('IsOrderWarningStock', code)
-    return False if v == '0' else True
-
-# @ftracer
-def GetMasterStockInfo(code):
-    try:
-        s = KOA_Functions('GetMasterStockInfo', code)
-        info = s.strip().split(';')
-        info = [i for i in info if len(i.strip()) > 0]
-        # print(len(info), info)
-        d = {}
-        for i in info:
-            li = i.split('|')
-            li = [e for e in li if len(e.strip()) > 0]
-            # print(li)
-            if len(li) == 1: d.update({li[0]:None})
-            elif len(li) == 2: d.update({li[0]:li[1]})
-            elif len(li) == 3:
-                d.update({li[0]:li[1]})
-                if li[0] == '시장구분0': d.update({'시장구분2':li[2]})
-                elif li[0] == '업종구분': d.update({'업종구분2':li[2]})
-        return d
-    except Exception as e:
-        logger.error(e)
-        return {}
-
-@ftracer
-def ShowAccountWindow(): return KOA_Functions('ShowAccountWindow', "")
-
-
-############################################################
-"""FunctionalAPIs::조건검색"""
-############################################################
-@ftracer
-def GetConditionLoad(): return dynamicCall('GetConditionLoad()')
-
-@ftracer
-def GetConditionNameList():
-    v = dynamicCall('GetConditionNameList()')
-    conds = v.split(';')
-    conds = [e for e in conds if len(e.strip()) > 0]
-    conds = [cond.split('^') for cond in conds]
-    print(['GetConditionNameList-->', len(conds), conds])
-    return conds
-
-@ftracer
-def SendCondition(ScrNo, ConditionName, Index, Search):
-    v = dynamicCall('SendCondition(QString,QString,int,int)', [ScrNo, ConditionName, Index, Search])
-    d = {1:'성공', 0:'실패'}
-    print(['SendCondition-->', ScrNo, ConditionName, Index, Search, d[v]])
-    return v
-
-@ftracer
-def SetRealReg(ScrNo, CodeList, FidList, OptType):
-    return dynamicCall('SetRealReg(QString,QString,QString,QString)', [ScrNo, CodeList, FidList, OptType])
-
-@ftracer
-def SetRealRemove(ScrNo, DelCode):
-    return dynamicCall('SetRealRemove(QString,QString)', [ScrNo, DelCode])
-
-############################################################
-"""FunctionalAPIs::조회와-실시간데이터처리"""
-############################################################
-@ftracer
-def CommRqData(RQName, TrCode, PrevNext, ScrNo):
-    return dynamicCall('CommRqData(QString,QString,int,QString)', [RQName, TrCode, PrevNext, ScrNo])
-
-# @ftracer
-def GetCommData(TrCode, RecordName, Index, ItemName):
-    return dynamicCall('GetCommData(QString,QString,int,QString)', [TrCode, RecordName, Index, ItemName])
-
-@ftracer
-def GetCommDataEx(TrCode, RecordName):
-    return dynamicCall('GetCommDataEx(QString,QString)', [TrCode, RecordName])
-
-# @ftracer
-def GetCommRealData(Code, Fid):
-    return dynamicCall('GetCommRealData(QString,QString)', [Code, Fid])
-
-@ftracer
-def GetRepeatCnt(TrCode, RQName):
-    return dynamicCall('GetRepeatCnt(QString,QString)', [TrCode, RQName])
-
-@ftracer
-def SetInputValue(ID, Value):
-    return dynamicCall('SetInputValue(QString,QString)', [ID, Value])
-
-############################################################
-"""FunctionalAPIs::주문과-잔고처리"""
-############################################################
-# @ftracer
-def GetChejanData(Fid):
-    return dynamicCall('GetChejanData(int)', [Fid])
-
-@ftracer
-def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo):
-    return dynamicCall(
-        'SendOrder(QString,QString,QString,int,QString,int,int,QString,QString)',
-        [RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo]
-    )
-
-
+from kiwoomapi._openapi import *
+from kiwoomapi._const import *
 
 
 ############################################################
@@ -396,6 +145,7 @@ def calc_goalprc(buyprc, goalpct='0.1%'):
     r = 1 + cost.to_float + goal.to_float
     return int(buyprc * r)
 
+
 def DtypeParser(k, v, dtype, unit=0):
     try:
         if dtype in ['int','int_abs','float']:
@@ -426,15 +176,7 @@ def DtypeParser(k, v, dtype, unit=0):
         logger.error([k, v, dtype, unit])
         raise
 
-@ftracer
-def get_cash():
-    if isMoiServer():
-        cash = 10*pow(10,4)
-    else:
-        # data = KiwoomAPI.get_data('예수금')
-        # cash = 0 if data is None else data[0]['d+2출금가능금액']
-        cash = 0
-    return cash
+
 
 
 class ScreenNumberGenerator(QBaseObject):
@@ -958,6 +700,24 @@ class HoldServer(QBaseObject):
 KiwoomAPI = KiwoomAPI()
 
 
+@ftracer
+def get_cash():
+    # 종목당 최대투자금
+    _max = 10*pow(10,4)
+    if isMoiServer():
+        cash = _max
+    else:
+        data = KiwoomAPI.get_data('예수금')
+        try:
+            cash = data[0]['주문가능금액']
+        except Exception as e:
+            logger.error(e)
+            cash = 0
+        else:
+            print({'cash':cash, '_max':_max})
+            cash = _max if cash > _max else 0
+    return cash
+
 
 
 ############################################################
@@ -1063,6 +823,8 @@ class TrDataServer(QBaseObject):
         self.view01(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
         # if TrCode == 'opw00018':
         #     self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
+        if TrCode == 'opw00001': print(Data)
+
 
         """데이타처리"""
         try:
@@ -1415,6 +1177,7 @@ class TrAPI(QBaseObject):
             id = d['id']
             if id == '계좌번호': d.update({'value': KiwoomAPI.AccountNo})
             elif id == '비밀번호': d.update({'value': ''})
+            elif id == '비밀번호입력매체구분': d.update({'value': '00'})
             else:
                 try: fmt = d['fmt']
                 except Exception as e: pass
