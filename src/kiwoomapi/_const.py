@@ -20,7 +20,7 @@ Commission = '0.015%'
 Cost = '0.23%'
 
 """트레이딩종목 최대개수"""
-MAX_REALREG_LIMIT = 100
+MAX_REALREG_LIMIT = 50
 
 """종목당 최대투자금"""
 MAX_TRADE_BUDGET = 10*pow(10,4)

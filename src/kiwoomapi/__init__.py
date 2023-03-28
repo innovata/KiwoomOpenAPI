@@ -200,62 +200,11 @@ def gen_scrNo(): return sng.gen()
 ############################################################
 """키움서버API"""
 ############################################################
-class KiwoomAPI(QBaseObject):
-    MsgSent = pyqtSignal(str, str, str, str)
-
-    ConnectSent = pyqtSignal(int)
-    LoginSucceeded = pyqtSignal()
-
-    TrDataSent = pyqtSignal(str, str, str, str, str, list)
-    OrdNoSent = pyqtSignal(str, str, str)
-    TrJangoSent = pyqtSignal(list)
-
-    RealDataSent = pyqtSignal(str, str, dict)
-    ChegeolSent = pyqtSignal(str, str, dict)
-    RealJangoSent = pyqtSignal(str, dict)
-
-    ConditionVerSent = pyqtSignal(int, str)
-    TrConditionSent = pyqtSignal(str, list, str, int, int)
-    RealConditionSent = pyqtSignal(str, str, str, str)
+class LoginServer(QBaseObject):
 
     @ctracer
     def __init__(self):
         super().__init__()
-
-        OpenAPI.OnReceiveMsg.connect(self.OnReceiveMsg)
-        OpenAPI.OnEventConnect.connect(self.OnEventConnect)
-        OpenAPI.OnReceiveTrData.connect(self.OnReceiveTrData)
-        OpenAPI.OnReceiveRealData.connect(self.OnReceiveRealData)
-        OpenAPI.OnReceiveChejanData.connect(self.OnReceiveChejanData)
-        OpenAPI.OnReceiveConditionVer.connect(self.OnReceiveConditionVer)
-        OpenAPI.OnReceiveTrCondition.connect(self.OnReceiveTrCondition)
-        OpenAPI.OnReceiveRealCondition.connect(self.OnReceiveRealCondition)
-
-        self.ConnectState = 0
-
-        self.TrServer = TrServer()
-        self.RealServer = RealServer()
-        self.HoldServer = HoldServer()
-    @ctracer
-    def State(self, *args): pass
-
-    @ctracer
-    @pyqtSlot()
-    def restart(self):
-        filepath = os.environ['RUN_FILE_PATH']
-        subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
-
-    """#################### 메시지서버 ####################"""
-    @ctracer
-    @pyqtSlot(str, str, str, str)
-    def OnReceiveMsg(self, ScrNo, RQName, TrCode, Msg):
-        # self.MsgSent.emit(ScrNo, RQName, TrCode, Msg)
-        if re.search('서버가 준비되어 있지 않습니다', Msg) is not None:
-            logger.critical(f'{Msg} --> 시스템재시작')
-            KiwoomAPI.restart()
-        else: pass
-
-    """#################### 로그인서버 ####################"""
     @ctracer
     def CommConnect(self, acct_win=False):
         self.acct_win = acct_win
@@ -280,7 +229,7 @@ class KiwoomAPI(QBaseObject):
                 # self.window_event_loop.exit()
             else: pass
 
-            self.RealServer.InitRealReg()
+            RealServer.InitRealReg()
             GetConditionLoad()
 
             """서버가 준비된 다음 마지막으로 신호를 보내라"""
@@ -323,95 +272,136 @@ class KiwoomAPI(QBaseObject):
         d = m.select(s, type='dict')
         for k,v in d.items(): setattr(self, k, v)
 
-    """#################### TR데이타서버 ####################"""
+LoginServer = LoginServer()
+
+
+class TrServer(QBaseObject):
+
     @ctracer
+    def __init__(self):
+        super().__init__()
+
+        self._setup_TrItem()
+
+        self.queue = []
+        """1초안에 최대 5번 요청할 수 있다"""
+        self.start_timer('TrReqTimer', self.__req__, 0.3)
+
+        self.storage = BaseDataClass('데이타스토리지', 보유종목=[])
+
+    """#################### 레지스터 ####################"""
+    # @ctracer
     def SetTrReg(self, inputs, rqname, trcode, prevnext, screen_no):
-        self.TrServer.SetTrReg(inputs, rqname, trcode, prevnext, screen_no)
-    @pyqtSlot(str, str, str, str, str, int, str, str, str)
-    def OnReceiveTrData(self, ScrNo, RQName, TrCode, RecordName, PrevNext, DataLength, ErrorCode, Message, SplmMsg):
-        if re.search('^KOA.+', TrCode) is not None:
-            """주문번호처리"""
-            ordNo = GetCommData(TrCode, RQName, 0, '주문번호').strip()
-            self.OrdNoSent.emit(TrCode, RQName, ordNo)
+        if trcode == 'opw00018':
+            if prevnext == 0: self.storage.set('TR계좌잔고', [])
+        else: pass
+
+        p = [inputs, rqname, trcode, prevnext, screen_no]
+        if p in self.queue: pass
+        else: self.queue.append(p)
+    # @ctracer
+    def __req__(self):
+        try:
+            inputs, rqname, trcode, prevnext, screen_no = self.queue.pop(0)
+        except Exception as e: pass
         else:
-            """일반데이타처리"""
-            Data = self.TrServer._build_trdata(TrCode, RQName, self.AccountNo)
+            for id, val in inputs: SetInputValue(id, val)
+            CommRqData(rqname, trcode, prevnext, screen_no)
+    def _report(self):
+        df = pd.DataFrame(self.queue, columns=['inputs','rqname','trcode','prevnext','screen_no'])
+        print(df.T)
 
-            if TrCode == 'opw00018':
-                self.HoldServer.set(self.TrServer.storage.get('보유종목'))
-
-            Data = [] if Data is None else Data
-            self.TrDataSent.emit(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
-
-    """#################### 실시간데이타서버 ####################"""
+    """#################### TR데이타처리 ####################"""
     @ctracer
-    def SetRealReg(self, code): self.RealServer.SetRealReg(code)
-    @ctracer
-    def SetRealRemove(self, code): self.RealServer.SetRealRemove(code)
-    @pyqtSlot(str, str, str)
-    def OnReceiveRealData(self, Code, RealType, RealData):
-        def __emit__():
-            d = self.RealServer._build_realdatum(Code, RealType)
-            if isinstance(d, dict): self.RealDataSent.emit(Code, RealType, d)
-            else: pass
+    def _setup_TrItem(self):
+        m = datamodels.TRItem()
+        c = m.find()
+        for d in list(c):
+            if 'unit' not in d: d.update({'unit':0})
+            o = BaseDataClass(**d)
+            id = o.trcode + '_' + o.item
+            setattr(self, id, o)
 
-        if RealType in ['장시작시간','VI발동/해제']: __emit__()
-        else:
-            if Code in self.RealServer.codes: __emit__()
-            else:
-                # 해제가 안된다......
-                # SetRealRemove('ALL', Code)
-                pass
-    @pyqtSlot(str, int, str)
-    def OnReceiveChejanData(self, Gubun, ItemCnt, FIdList):
-        d = self.RealServer._build_chejandatum(FIdList)
-        code = clean_issueCode(d['종목코드,업종코드'])
-        if Gubun == '0':
-            self.ChegeolSent.emit(code, d['주문번호'], d)
-            # 신규매수/도 체결이 완료될 때 계좌잔고를 재요청한다
-            if d['미체결수량'] == 0: self._refresh_trjango({'종목명':d['종목명'], '미체결수량':0})
-        elif Gubun == '1':
-            self.HoldServer.add(d['종목명'])
+        self.trcodes = m.distinct('trcode')
+        for trcode in self.trcodes:
+            setattr(self, trcode, m.distinct('item', {'trcode':trcode}))
+    def _parse_value(self, trcode, item, value):
+        try: o = getattr(self, f'{trcode}_{item}')
+        except Exception as e: return value
+        else: return DtypeParser(o.item, value, o.dtype, o.unit)
+    def _build_trdata(self, TrCode, RQName, AccountNo):
+        if TrCode in self.trcodes:
+            n = GetRepeatCnt(TrCode, RQName)
+            dt = trddt.now()
+            items = getattr(self, TrCode)
+            Data = []
+            for i in range(0, n+1, 1):
+                d = {'dt': dt}
+                for item in items:
+                    v = GetCommData(TrCode, RQName, i, item).strip()
+                    if len(v) == 0: pass
+                    else:
+                        v = self._parse_value(TrCode, item, v)
+                        d.update({item: v})
+                if len(d) > 1: Data.append(d)
+                else: pass
 
-            self.RealServer.storage.set(code, d)
-            self.RealJangoSent.emit(code, d)
-    @ctracer
-    def _refresh_trjango(self, *args):
-        self.trapi01 = TrAPI('계좌평가잔고내역요청', maxLoop=None, timeout=10)
-        self.trapi01.req()
+            try: Data = getattr(self, f'_process_{TrCode}')(Data, AccountNo)
+            except Exception as e: pass
+            return Data
 
-    """#################### 조건검색서버 ####################"""
-    @pyqtSlot(int, str)
-    def OnReceiveConditionVer(self, Ret, Msg):
-        self.ConditionVerSent.emit(Ret, Msg)
-    @pyqtSlot(str, str, str, int, int)
-    def OnReceiveTrCondition(self, ScrNo, CodeList, ConditionName, Index, Next):
-        CodeList = CodeList.split(';')
-        CodeList = [c for c in CodeList if len(c.strip()) > 0]
-        self.TrConditionSent.emit(ScrNo, CodeList, ConditionName, Index, Next)
-    @pyqtSlot(str, str, str, str)
-    def OnReceiveRealCondition(self, Code, Type, ConditionName, ConditionIndex):
-        self.RealConditionSent.emit(Code, Type, ConditionName, ConditionIndex)
+        else: return None
+    """예수금상세현황요청"""
+    # @ctracer
+    def _process_opw00001(self, Data, AccountNo):
+        for d in Data: d.update({'계좌번호':AccountNo})
+        self.storage.set('예수금', Data)
+        return Data
+    """계좌평가잔고내역요청"""
+    # @ctracer
+    def _process_opw00018(self, Data, AccountNo):
+        if len(Data) > 0:
+            for d in Data: d.update({'계좌번호':AccountNo})
 
-    """#################### 데이타스토리지 ####################"""
+            # 기존잔고에 신규잔고를 합산
+            li = self.storage.get('TR계좌잔고')
+            li += Data
+            for d in li: d.update({'dt':trddt.now()})
+            df = pd.DataFrame(li).sort_values('평가손익', ascending=False).reset_index(drop=True)
+            l1 = len(df)
+            df = df.drop_duplicates(keep='first', subset=['종목명'])
+            l2 = len(df)
+            print('TR계좌잔고합산', [l1, l2])
+            self.storage.set('TR계좌잔고', df.to_dict('records'))
+            self.storage.set('보유종목', list(df.종목명))
+
+            """뷰어"""
+            _df = df.loc[:, ['종목명','평가손익','수익률(%)']]
+            print('-'*100)
+            print(_df[:60])
+            if len(df) > 60:
+                print('-'*100)
+                print(_df[60:])
+        else: pass
+        return Data
     @ctracer
     def get_data(self, k):
-        v = self.TrServer.storage.get(k)
+        v = self.storage.get(k)
         if v is None: logger.warning([self, f"요청한 '{k}' 정보는 가지고 있지 않다"])
         else: return v
     @ctracer
     def get_value(self, k):
         try:
             if k == 'd+2출금가능금액':
-                v = self.TrServer.storage.get('예수금')[0][k]
+                v = self.storage.get('예수금')[0][k]
                 return 0 if v is None else v
             elif k == '종목최대투자금': return MAX_TRADE_BUDGET
-            elif k == '보유종목': return self.HoldServer.holds
+            elif k == '보유종목': return HoldServer.holds
             else: return None
         except Exception as e:
             return None
-    @ctracer
-    def get_realjango(self, code): return self.RealServer.storage.get(code)
+
+TrServer = TrServer()
 
 
 class RealServer(QBaseObject):
@@ -567,117 +557,10 @@ class RealServer(QBaseObject):
         if t1 <= t <= t2: __autochange__()
         elif t3 <= t <= t4: __autochange__()
         else: pass
-
-
-class TrServer(QBaseObject):
-
     @ctracer
-    def __init__(self):
-        super().__init__()
+    def get_jango(self, code): return self.storage.get(code)
 
-        self._setup_TrItem()
-
-        self.queue = []
-        """1초안에 최대 5번 요청할 수 있다"""
-        self.start_timer('TrReqTimer', self.__req__, 0.3)
-
-        self.storage = BaseDataClass('데이타스토리지', 보유종목=[])
-
-    """#################### 레지스터 ####################"""
-    # @ctracer
-    def SetTrReg(self, inputs, rqname, trcode, prevnext, screen_no):
-        if trcode == 'opw00018':
-            if prevnext == 0: self.storage.set('TR계좌잔고', [])
-        else: pass
-
-        p = [inputs, rqname, trcode, prevnext, screen_no]
-        if p in self.queue: pass
-        else: self.queue.append(p)
-    # @ctracer
-    def __req__(self):
-        try:
-            inputs, rqname, trcode, prevnext, screen_no = self.queue.pop(0)
-        except Exception as e: pass
-        else:
-            for id, val in inputs: SetInputValue(id, val)
-            CommRqData(rqname, trcode, prevnext, screen_no)
-    def _report(self):
-        df = pd.DataFrame(self.queue, columns=['inputs','rqname','trcode','prevnext','screen_no'])
-        print(df.T)
-
-    """#################### TR데이타처리 ####################"""
-    @ctracer
-    def _setup_TrItem(self):
-        m = datamodels.TRItem()
-        c = m.find()
-        for d in list(c):
-            if 'unit' not in d: d.update({'unit':0})
-            o = BaseDataClass(**d)
-            id = o.trcode + '_' + o.item
-            setattr(self, id, o)
-
-        self.trcodes = m.distinct('trcode')
-        for trcode in self.trcodes:
-            setattr(self, trcode, m.distinct('item', {'trcode':trcode}))
-    def _parse_value(self, trcode, item, value):
-        try: o = getattr(self, f'{trcode}_{item}')
-        except Exception as e: return value
-        else: return DtypeParser(o.item, value, o.dtype, o.unit)
-    def _build_trdata(self, TrCode, RQName, AccountNo):
-        if TrCode in self.trcodes:
-            n = GetRepeatCnt(TrCode, RQName)
-            dt = trddt.now()
-            items = getattr(self, TrCode)
-            Data = []
-            for i in range(0, n+1, 1):
-                d = {'dt': dt}
-                for item in items:
-                    v = GetCommData(TrCode, RQName, i, item).strip()
-                    if len(v) == 0: pass
-                    else:
-                        v = self._parse_value(TrCode, item, v)
-                        d.update({item: v})
-                if len(d) > 1: Data.append(d)
-                else: pass
-
-            try: Data = getattr(self, f'_process_{TrCode}')(Data, AccountNo)
-            except Exception as e: pass
-            return Data
-
-        else: return None
-    """예수금상세현황요청"""
-    # @ctracer
-    def _process_opw00001(self, Data, AccountNo):
-        for d in Data: d.update({'계좌번호':AccountNo})
-        self.storage.set('예수금', Data)
-        return Data
-    """계좌평가잔고내역요청"""
-    # @ctracer
-    def _process_opw00018(self, Data, AccountNo):
-        if len(Data) > 0:
-            for d in Data: d.update({'계좌번호':AccountNo})
-
-            # 기존잔고에 신규잔고를 합산
-            li = self.storage.get('TR계좌잔고')
-            li += Data
-            for d in li: d.update({'dt':trddt.now()})
-            df = pd.DataFrame(li).sort_values('평가손익', ascending=False).reset_index(drop=True)
-            l1 = len(df)
-            df = df.drop_duplicates(keep='first', subset=['종목명'])
-            l2 = len(df)
-            print('TR계좌잔고합산', [l1, l2])
-            self.storage.set('TR계좌잔고', df.to_dict('records'))
-            self.storage.set('보유종목', list(df.종목명))
-
-            """뷰어"""
-            _df = df.loc[:, ['종목명','평가손익','수익률(%)']]
-            print('-'*100)
-            print(_df[:60])
-            if len(df) > 60:
-                print('-'*100)
-                print(_df[60:])
-        else: pass
-        return Data
+RealServer = RealServer()
 
 
 class HoldServer(QBaseObject):
@@ -696,6 +579,205 @@ class HoldServer(QBaseObject):
         self._report()
     def _report(self): print('보유종목리스트', [len(self.holds), self.holds])
 
+HoldServer = HoldServer()
+
+
+class KiwoomAPI(QBaseObject):
+    MsgSent = pyqtSignal(str, str, str, str)
+
+    ConnectSent = pyqtSignal(int)
+    LoginSucceeded = pyqtSignal()
+
+    TrDataSent = pyqtSignal(str, str, str, str, str, list)
+    OrdNoSent = pyqtSignal(str, str, str)
+    TrJangoSent = pyqtSignal(list)
+
+    RealDataSent = pyqtSignal(str, str, dict)
+    ChegeolSent = pyqtSignal(str, str, dict)
+    RealJangoSent = pyqtSignal(str, dict)
+
+    ConditionVerSent = pyqtSignal(int, str)
+    TrConditionSent = pyqtSignal(str, list, str, int, int)
+    RealConditionSent = pyqtSignal(str, str, str, str)
+
+    @ctracer
+    def __init__(self):
+        super().__init__()
+
+        OpenAPI.OnReceiveMsg.connect(self.OnReceiveMsg)
+        OpenAPI.OnEventConnect.connect(self.OnEventConnect)
+        OpenAPI.OnReceiveTrData.connect(self.OnReceiveTrData)
+        OpenAPI.OnReceiveRealData.connect(self.OnReceiveRealData)
+        OpenAPI.OnReceiveChejanData.connect(self.OnReceiveChejanData)
+        OpenAPI.OnReceiveConditionVer.connect(self.OnReceiveConditionVer)
+        OpenAPI.OnReceiveTrCondition.connect(self.OnReceiveTrCondition)
+        OpenAPI.OnReceiveRealCondition.connect(self.OnReceiveRealCondition)
+
+        self.ConnectState = 0
+    @ctracer
+    def State(self, *args): pass
+
+    @ctracer
+    @pyqtSlot()
+    def restart(self):
+        filepath = os.environ['RUN_FILE_PATH']
+        subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
+
+    """#################### 메시지서버 ####################"""
+    @ctracer
+    @pyqtSlot(str, str, str, str)
+    def OnReceiveMsg(self, ScrNo, RQName, TrCode, Msg):
+        # self.MsgSent.emit(ScrNo, RQName, TrCode, Msg)
+        if re.search('서버가 준비되어 있지 않습니다', Msg) is not None:
+            logger.critical(f'{Msg} --> 시스템재시작')
+            KiwoomAPI.restart()
+        else: pass
+
+    """#################### 로그인서버 ####################"""
+    @ctracer
+    def CommConnect(self, acct_win=False):
+        self.acct_win = acct_win
+        CommConnect()
+        self.login_event_loop = QEventLoop()
+        self.login_event_loop.exec()
+    @ctracer
+    @pyqtSlot(int)
+    def OnEventConnect(self, ErrCode):
+        self.ConnectState = OpenAPI.GetConnectState()
+        if ErrCode == 0:
+            self._set_login_info()
+            self._set_account_info()
+            pretty_title('로그인성공')
+            dbg.dict(self)
+
+            """계좌번호입력창"""
+            if self.acct_win:
+                ShowAccountWindow()
+                # self.window_event_loop = QEventLoop()
+                # self.window_event_loop.exec()
+                # self.window_event_loop.exit()
+            else: pass
+
+            RealServer.InitRealReg()
+            GetConditionLoad()
+
+            """서버가 준비된 다음 마지막으로 신호를 보내라"""
+            self.LoginSucceeded.emit()
+
+            """시스템재시작테스트"""
+            # for i in range(10):
+            #     print(i)
+            #     sleep(1)
+            # self.restart()
+        else:
+            logger.critical(['로그인실패 --> 시스템재시작'])
+            self.restart()
+        self.login_event_loop.exit()
+    @ctracer
+    def _set_login_info(self):
+        items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
+        for item in items:
+            v = OpenAPI.GetLoginInfo(item)
+            setattr(self, item, v)
+    @ctracer
+    def _set_account_info(self):
+        m = datamodels.Account()
+
+        """신규계좌번호 저장"""
+        acct_list = [e.strip() for e in self.ACCLIST.split(';') if len(e.strip()) > 0]
+        for acct in acct_list:
+            d = m.select(acct, type='dict')
+            if d is None:
+                gubun = '모의' if self.GetServerGubun == '1' else '실전'
+                bank = '키움증권모의투자' if self.GetServerGubun == '1' else '무슨은행'
+                d = {'AccountNo':acct,
+                    'AccountGubun':gubun,
+                    'AccountBank':bank,
+                    'AccountCreatedDate':trddt.today()}
+                m.insert_one(d)
+            else: pass
+        """계좌정보셋업"""
+        s = '8041895711' if self.GetServerGubun == '1' else '하나은행'
+        d = m.select(s, type='dict')
+        for k,v in d.items(): setattr(self, k, v)
+
+    """#################### TR데이타서버 ####################"""
+    @ctracer
+    def SetTrReg(self, inputs, rqname, trcode, prevnext, screen_no):
+        TrServer.SetTrReg(inputs, rqname, trcode, prevnext, screen_no)
+    @pyqtSlot(str, str, str, str, str, int, str, str, str)
+    def OnReceiveTrData(self, ScrNo, RQName, TrCode, RecordName, PrevNext, DataLength, ErrorCode, Message, SplmMsg):
+        if re.search('^KOA.+', TrCode) is not None:
+            """주문번호처리"""
+            ordNo = GetCommData(TrCode, RQName, 0, '주문번호').strip()
+            self.OrdNoSent.emit(TrCode, RQName, ordNo)
+        else:
+            """일반데이타처리"""
+            Data = TrServer._build_trdata(TrCode, RQName, self.AccountNo)
+
+            if TrCode == 'opw00018':
+                HoldServer.set(TrServer.storage.get('보유종목'))
+
+            Data = [] if Data is None else Data
+            self.TrDataSent.emit(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
+
+    """#################### 실시간데이타서버 ####################"""
+    @ctracer
+    def SetRealReg(self, code): RealServer.SetRealReg(code)
+    @ctracer
+    def SetRealRemove(self, code): RealServer.SetRealRemove(code)
+    @pyqtSlot(str, str, str)
+    def OnReceiveRealData(self, Code, RealType, RealData):
+        def __emit__():
+            d = RealServer._build_realdatum(Code, RealType)
+            if isinstance(d, dict): self.RealDataSent.emit(Code, RealType, d)
+            else: pass
+
+        if RealType in ['장시작시간','VI발동/해제']: __emit__()
+        else:
+            if Code in RealServer.codes: __emit__()
+            else:
+                # 해제가 안된다......
+                # SetRealRemove('ALL', Code)
+                pass
+    @pyqtSlot(str, int, str)
+    def OnReceiveChejanData(self, Gubun, ItemCnt, FIdList):
+        d = RealServer._build_chejandatum(FIdList)
+        code = clean_issueCode(d['종목코드,업종코드'])
+        if Gubun == '0':
+            self.ChegeolSent.emit(code, d['주문번호'], d)
+            # 신규매수/도 체결이 완료될 때 계좌잔고를 재요청한다
+            if d['미체결수량'] == 0: self._refresh_trjango({'종목명':d['종목명'], '미체결수량':0})
+        elif Gubun == '1':
+            HoldServer.add(d['종목명'])
+
+            RealServer.storage.set(code, d)
+            self.RealJangoSent.emit(code, d)
+    @ctracer
+    def _refresh_trjango(self, *args):
+        self.trapi01 = TrAPI('계좌평가잔고내역요청', maxLoop=None, timeout=10)
+        self.trapi01.req()
+
+    """#################### 조건검색서버 ####################"""
+    @pyqtSlot(int, str)
+    def OnReceiveConditionVer(self, Ret, Msg):
+        self.ConditionVerSent.emit(Ret, Msg)
+    @pyqtSlot(str, str, str, int, int)
+    def OnReceiveTrCondition(self, ScrNo, CodeList, ConditionName, Index, Next):
+        CodeList = CodeList.split(';')
+        CodeList = [c for c in CodeList if len(c.strip()) > 0]
+        self.TrConditionSent.emit(ScrNo, CodeList, ConditionName, Index, Next)
+    @pyqtSlot(str, str, str, str)
+    def OnReceiveRealCondition(self, Code, Type, ConditionName, ConditionIndex):
+        self.RealConditionSent.emit(Code, Type, ConditionName, ConditionIndex)
+
+    """#################### 데이타스토리지 ####################"""
+    @ctracer
+    def get_data(self, k): return TrServer.get_data(k)
+    @ctracer
+    def get_value(self, k): return TrServer.get_value(k)
+    @ctracer
+    def get_realjango(self, code): return RealServer.get_jango(code)
 
 KiwoomAPI = KiwoomAPI()
 
@@ -976,6 +1058,7 @@ class RealDataServer(QBaseObject):
             setattr(self, k, m)
         finally:
             m.insert_one(Datum)
+
 
 """체결잔고데이타 수집기"""
 class ChejanDataServer(QBaseObject):
