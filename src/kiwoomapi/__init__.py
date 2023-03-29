@@ -630,7 +630,10 @@ class KiwoomAPI(QBaseObject):
     @pyqtSlot(int)
     def OnEventConnect(self, ErrCode): pass
     @pyqtSlot()
-    def _login_succeeded(self): self.LoginSucceeded.emit()
+    def _login_succeeded(self):
+        RealServer.InitRealReg()
+        GetConditionLoad()
+        self.LoginSucceeded.emit()
 
     """#################### TR데이타서버 ####################"""
     @ctracer
@@ -727,7 +730,7 @@ def get_cash():
             cash = 0
         else:
             print({'cash':cash, 'MAX_TRADE_BUDGET':MAX_TRADE_BUDGET})
-            cash = _max if cash > _max else 0
+            cash = MAX_TRADE_BUDGET if cash > MAX_TRADE_BUDGET else 0
     return cash
 
 
