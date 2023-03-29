@@ -196,15 +196,23 @@ sng = ScreenNumberGenerator()
 def gen_scrNo(): return sng.gen()
 
 
+@ftracer
+def restart():
+    filepath = os.environ['RUN_FILE_PATH']
+    subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
+
 
 ############################################################
 """키움서버API"""
 ############################################################
 class LoginServer(QBaseObject):
+    ConnectSent = pyqtSignal(int)
+    LoginSucceeded = pyqtSignal()
 
     @ctracer
     def __init__(self):
         super().__init__()
+        OpenAPI.OnEventConnect.connect(self._recv_conn)
     @ctracer
     def CommConnect(self, acct_win=False):
         self.acct_win = acct_win
@@ -213,8 +221,8 @@ class LoginServer(QBaseObject):
         self.login_event_loop.exec()
     @ctracer
     @pyqtSlot(int)
-    def OnEventConnect(self, ErrCode):
-        self.ConnectState = OpenAPI.GetConnectState()
+    def _recv_conn(self, ErrCode):
+        self.ConnectState = GetConnectState()
         if ErrCode == 0:
             self._set_login_info()
             self._set_account_info()
@@ -222,33 +230,19 @@ class LoginServer(QBaseObject):
             dbg.dict(self)
 
             """계좌번호입력창"""
-            if self.acct_win:
-                ShowAccountWindow()
-                # self.window_event_loop = QEventLoop()
-                # self.window_event_loop.exec()
-                # self.window_event_loop.exit()
+            if self.acct_win: ShowAccountWindow()
             else: pass
-
-            RealServer.InitRealReg()
-            GetConditionLoad()
-
             """서버가 준비된 다음 마지막으로 신호를 보내라"""
             self.LoginSucceeded.emit()
-
-            """시스템재시작테스트"""
-            # for i in range(10):
-            #     print(i)
-            #     sleep(1)
-            # self.restart()
         else:
             logger.critical(['로그인실패 --> 시스템재시작'])
-            self.restart()
+            restart()
         self.login_event_loop.exit()
     @ctracer
     def _set_login_info(self):
         items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
         for item in items:
-            v = OpenAPI.GetLoginInfo(item)
+            v = GetLoginInfo(item)
             setattr(self, item, v)
     @ctracer
     def _set_account_info(self):
@@ -617,12 +611,6 @@ class KiwoomAPI(QBaseObject):
     @ctracer
     def State(self, *args): pass
 
-    @ctracer
-    @pyqtSlot()
-    def restart(self):
-        filepath = os.environ['RUN_FILE_PATH']
-        subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
-
     """#################### 메시지서버 ####################"""
     @ctracer
     @pyqtSlot(str, str, str, str)
@@ -636,70 +624,13 @@ class KiwoomAPI(QBaseObject):
     """#################### 로그인서버 ####################"""
     @ctracer
     def CommConnect(self, acct_win=False):
-        self.acct_win = acct_win
-        CommConnect()
-        self.login_event_loop = QEventLoop()
-        self.login_event_loop.exec()
+        LoginServer.LoginSucceeded.connect(self._login_succeeded)
+        LoginServer.CommConnect(acct_win)
     @ctracer
     @pyqtSlot(int)
-    def OnEventConnect(self, ErrCode):
-        self.ConnectState = OpenAPI.GetConnectState()
-        if ErrCode == 0:
-            self._set_login_info()
-            self._set_account_info()
-            pretty_title('로그인성공')
-            dbg.dict(self)
-
-            """계좌번호입력창"""
-            if self.acct_win:
-                ShowAccountWindow()
-                # self.window_event_loop = QEventLoop()
-                # self.window_event_loop.exec()
-                # self.window_event_loop.exit()
-            else: pass
-
-            RealServer.InitRealReg()
-            GetConditionLoad()
-
-            """서버가 준비된 다음 마지막으로 신호를 보내라"""
-            self.LoginSucceeded.emit()
-
-            """시스템재시작테스트"""
-            # for i in range(10):
-            #     print(i)
-            #     sleep(1)
-            # self.restart()
-        else:
-            logger.critical(['로그인실패 --> 시스템재시작'])
-            self.restart()
-        self.login_event_loop.exit()
-    @ctracer
-    def _set_login_info(self):
-        items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
-        for item in items:
-            v = OpenAPI.GetLoginInfo(item)
-            setattr(self, item, v)
-    @ctracer
-    def _set_account_info(self):
-        m = datamodels.Account()
-
-        """신규계좌번호 저장"""
-        acct_list = [e.strip() for e in self.ACCLIST.split(';') if len(e.strip()) > 0]
-        for acct in acct_list:
-            d = m.select(acct, type='dict')
-            if d is None:
-                gubun = '모의' if self.GetServerGubun == '1' else '실전'
-                bank = '키움증권모의투자' if self.GetServerGubun == '1' else '무슨은행'
-                d = {'AccountNo':acct,
-                    'AccountGubun':gubun,
-                    'AccountBank':bank,
-                    'AccountCreatedDate':trddt.today()}
-                m.insert_one(d)
-            else: pass
-        """계좌정보셋업"""
-        s = '8041895711' if self.GetServerGubun == '1' else '하나은행'
-        d = m.select(s, type='dict')
-        for k,v in d.items(): setattr(self, k, v)
+    def OnEventConnect(self, ErrCode): pass
+    @pyqtSlot()
+    def _login_succeeded(self): self.LoginSucceeded.emit()
 
     """#################### TR데이타서버 ####################"""
     @ctracer
@@ -713,7 +644,7 @@ class KiwoomAPI(QBaseObject):
             self.OrdNoSent.emit(TrCode, RQName, ordNo)
         else:
             """일반데이타처리"""
-            Data = TrServer._build_trdata(TrCode, RQName, self.AccountNo)
+            Data = TrServer._build_trdata(TrCode, RQName, LoginServer.AccountNo)
 
             if TrCode == 'opw00018':
                 HoldServer.set(TrServer.storage.get('보유종목'))
@@ -782,21 +713,20 @@ class KiwoomAPI(QBaseObject):
 KiwoomAPI = KiwoomAPI()
 
 
+"""종목당 최대투자금"""
 @ftracer
 def get_cash():
-    # 종목당 최대투자금
-    _max = 10*pow(10,4)
     if isMoiServer():
-        cash = _max
+        cash = MAX_TRADE_BUDGET
     else:
-        data = KiwoomAPI.get_data('예수금')
         try:
+            data = KiwoomAPI.get_data('예수금')
             cash = data[0]['주문가능금액']
         except Exception as e:
             logger.error(e)
             cash = 0
         else:
-            print({'cash':cash, '_max':_max})
+            print({'cash':cash, 'MAX_TRADE_BUDGET':MAX_TRADE_BUDGET})
             cash = _max if cash > _max else 0
     return cash
 
@@ -810,6 +740,7 @@ TR_DATA_MONITOR_ON = 1
 REAL_DATA_MONITOR_ON = 0
 CHEJAN_DATA_MONITOR_ON = 1
 COND_DATA_MONITOR_ON = 0
+
 
 class BackendServer(QBaseObject):
 
@@ -1076,7 +1007,7 @@ class ChejanDataServer(QBaseObject):
 
     @pyqtSlot()
     def _setup_after_login(self):
-        try: v = KiwoomAPI.AccountNo
+        try: v = LoginServer.AccountNo
         except Exception as e: pass
         else:
             self.stop_timer('LoginCheckTimer')
@@ -1258,7 +1189,7 @@ class TrAPI(QBaseObject):
             val = d['value']
 
             id = d['id']
-            if id == '계좌번호': d.update({'value': KiwoomAPI.AccountNo})
+            if id == '계좌번호': d.update({'value': LoginServer.AccountNo})
             elif id == '비밀번호': d.update({'value': ''})
             elif id == '비밀번호입력매체구분': d.update({'value': '00'})
             else:
@@ -1267,14 +1198,14 @@ class TrAPI(QBaseObject):
                 else: d.update({'value': __autoset_dttype(id, val, self.trcode, fmt)})
 
             """RQName초기값자동셋업"""
-            if id == '계좌번호': self.rqname = KiwoomAPI.AccountNo
+            if id == '계좌번호': self.rqname = LoginServer.AccountNo
             elif id == '종목코드': self.rqname = val
             else: self.rqname = self.trname
     def set(self, k, v):
         for d in self._inputs:
             if d['id'] == k: d.update({'value':v})
             """RQName자동셋업"""
-            if k == '계좌번호': self.rqname = KiwoomAPI.AccountNo
+            if k == '계좌번호': self.rqname = LoginServer.AccountNo
             elif k == '종목코드': self.rqname = v
             else: self.rqname = self.trname
     @property
@@ -1757,7 +1688,7 @@ class OrderAPI(QBaseObject):
 
         """파라미터 셋업"""
         self.rqname = trddt.logtime()
-        self.acct_no = KiwoomAPI.AccountNo
+        self.acct_no = LoginServer.AccountNo
         self.screen_no = gen_scrNo()
         self.Issue = datamodels.Issue().select(isscdnm)
         self.code = self.Issue.code

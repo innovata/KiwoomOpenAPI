@@ -66,8 +66,8 @@ class kiwoomapi_openapi(AppTester):
 
     def __init__(self): super().__init__()
     def run(self):
-        self.testNo(501)
-        self.testNo(402)
+        # self.testNo(501)
+        self.testNo(1)
 
     """#################### OpenAPI ####################"""
     """로그인-버전처리"""
