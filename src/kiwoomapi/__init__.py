@@ -281,6 +281,8 @@ class LoginServer(QBaseObject):
 
 LoginServer = LoginServer()
 
+def account_no(): return LoginServer.AccountNo
+
 
 class TrServer(QBaseObject):
 
@@ -757,7 +759,7 @@ RAW_DATA_MONITOR_ON = 0
 TR_DATA_MONITOR_ON = 1
 REAL_DATA_MONITOR_ON = 0
 CHEJAN_DATA_MONITOR_ON = 1
-COND_DATA_MONITOR_ON = 1
+COND_DATA_MONITOR_ON = 0
 
 
 class BackendServer(QBaseObject):
