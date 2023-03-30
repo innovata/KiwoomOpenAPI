@@ -66,7 +66,7 @@ class kiwoomapi_openapi(AppTester):
 
     def __init__(self): super().__init__()
     def run(self):
-        # self.testNo(501)
+        self.testNo(501)
         self.testNo(1)
 
     """#################### OpenAPI ####################"""
@@ -505,6 +505,7 @@ class kiwoomapi_openapi(AppTester):
     """#################### BackendServer ####################"""
     def test501(self): self.run_worker(openapi.BackendServer)
     def test502(self): self.run_worker(openapi.RawDataServer)
+    def test503(self): self.run_worker(openapi.CondDataServer)
 
 
 

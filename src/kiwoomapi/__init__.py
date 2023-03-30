@@ -64,9 +64,22 @@ def _setup_IssueMap():
 
 IssueCodeName, IssueNameCode = _setup_IssueMap()
 
-def getIssName(code): return getattr(IssueCodeName, code)
+def getIssName(code):
+    try:
+        return getattr(IssueCodeName, code)
+    except Exception as e:
+        logger.error([e, code])
+        name = GetMasterCodeName(code)
+        setattr(IssueCodeName, code, name)
+        setattr(IssueNameCode, name, code)
+        return name
 
-def getIssCode(name): return getattr(IssueNameCode, name)
+def getIssCode(name):
+    try:
+        return getattr(IssueNameCode, name)
+    except Exception as e:
+        logger.error(e, name)
+        raise
 
 def isscdnm(code):
     name = getIssName(code)
@@ -691,6 +704,8 @@ class KiwoomAPI(QBaseObject):
     def _refresh_trjango(self, *args):
         self.trapi01 = TrAPI('계좌평가잔고내역요청', maxLoop=None, timeout=10)
         self.trapi01.req()
+        self.trapi02 = TrAPI('예수금상세현황요청', timeout=10)
+        self.trapi02.req()
 
     """#################### 조건검색서버 ####################"""
     @pyqtSlot(int, str)
@@ -742,7 +757,7 @@ RAW_DATA_MONITOR_ON = 0
 TR_DATA_MONITOR_ON = 1
 REAL_DATA_MONITOR_ON = 0
 CHEJAN_DATA_MONITOR_ON = 1
-COND_DATA_MONITOR_ON = 0
+COND_DATA_MONITOR_ON = 1
 
 
 class BackendServer(QBaseObject):
