@@ -142,8 +142,7 @@ def callprcinfo02(code, prc, pct):
     return callprcinfo00(code, nextprc)
 
 """모의투자도 실전투자 기준으로 맞추는게 맞다"""
-def get_CostRate():
-    return round(inumber.Percent(Cost).to_float, 4)
+def get_CostRate(): return round(inumber.Percent(Cost).to_float, 4)
 
 """수익률계산"""
 def calc_profit(p1, p2):
@@ -1278,7 +1277,6 @@ class IssueAPI(QBaseObject):
     soldOut = pyqtSignal()
     onSale = pyqtSignal()
     onBuy = pyqtSignal()
-    SendSellSig = pyqtSignal(int, int)
 
     @ctracer
     def __init__(self, cdnm):
@@ -1303,7 +1301,6 @@ class IssueAPI(QBaseObject):
             self.start_timer('PrePriceRateTimer', self._setup_preprices, 10)
             self.start_timer('TrJangoReadTimer', self._read_trjango, 5)
             self._read_trjango()
-            self.start_timer('ValuateTimer', self._calc_CurProfitPct, 1)
             self.start_timer('VICalculateTimer', self._calc_vi, 10)
 
             # self.start_timer('SelfDebugTimer', self._debug01, 10)
@@ -1610,39 +1607,8 @@ class IssueAPI(QBaseObject):
             setattr(self, '목표매도호가', p)
             setattr(self, '목표매도호가R', r)
             # print([self.cdnm, p0, p, r])
-
-    """현수익률&매도신호"""
     # @ctracer
-    def _calc_CurProfitPct(self):
-        def __sell__(p1):
-            print([self.cdnm, '팔아라'])
-            self._debug04()
-            amt = self._get_sellable_amt()
-            if amt > 0: self.SendSellSig.emit(p1, amt)
-            else: pass
-
-        try:
-            p0 = getattr(self, '매입단가')
-            p1 = getattr(self, '매수호가1')
-        except Exception as e: pass
-        else:
-            r1 = round(p1/p0-1, 4)
-            r1 -= get_CostRate()
-            setattr(self, '현수익률R', round(r1, 4))
-
-            """METHOD-1::목표매도호가R 로 매도판단"""
-            try: p2 = getattr(self, '목표매도호가')
-            except Exception as e: pass
-            else:
-                if p1 >= p2 and r1 > 0: __sell__(p1)
-
-            """METHOD-2::목표수익률R 로 매도판단"""
-            try: r0 = getattr(self, '목표수익률R')
-            except Exception as e: pass
-            else:
-                if r1 >= r0: __sell__(p1)
-    # @ctracer
-    def _get_sellable_amt(self):
+    def get_sellable_amt(self):
         try:
             a1 = getattr(self, '보유수량')
             a2 = getattr(self, '주문가능수량')
