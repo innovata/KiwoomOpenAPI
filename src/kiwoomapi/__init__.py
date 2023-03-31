@@ -747,7 +747,7 @@ def get_cash():
             cash = 0
         else:
             print({'cash':cash, 'MAX_TRADE_BUDGET':MAX_TRADE_BUDGET})
-            cash = MAX_TRADE_BUDGET if cash > MAX_TRADE_BUDGET else 0
+            cash = MAX_TRADE_BUDGET if cash >= MAX_TRADE_BUDGET else 0
     return cash
 
 
@@ -1628,7 +1628,7 @@ class IssueAPI(QBaseObject):
         else:
             r1 = round(p1/p0-1, 4)
             r1 -= get_CostRate()
-            setattr(self, '현수익률R', round(r1,4))
+            setattr(self, '현수익률R', round(r1, 4))
 
             """METHOD-1::목표매도호가R 로 매도판단"""
             try: p2 = getattr(self, '목표매도호가')
