@@ -945,7 +945,6 @@ class RealDataServer(QBaseObject):
         OpenAPI.OnReceiveRealData.connect(self.OnReceiveRealData)
         KiwoomAPI.RealDataSent.connect(self._recv_realdata)
         self.mdb = BaseDataClass('RealModelsMDB')
-        self.Company = datamodels.Issue()
 
     @pyqtSlot(str, str, str)
     def OnReceiveRealData(self, Code, RealType, RealData):
@@ -1032,7 +1031,6 @@ class ChejanDataServer(QBaseObject):
             self.stop_timer('LoginCheckTimer')
             self.Chegeol = datamodels.RealModelV1('주문체결', v)
             self.Jango = datamodels.RealModelV1('잔고', v)
-            self.Company = datamodels.Issue()
     @pyqtSlot(str, str, dict)
     def _recv_chegeol(self, code, ordNo, d):
         """모니터링"""
