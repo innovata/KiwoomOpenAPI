@@ -19,15 +19,6 @@ Commission = '0.015%'
 """거래세+매수/도수수료"""
 Cost = '0.23%'
 
-"""총 투자금액"""
-TOTAL_INVEST_MONEY = 500 * pow(10,4)
-
-"""종목당 최대투자금"""
-MAX_TRADE_BUDGET = 10*pow(10,4)
-
-"""트레이딩종목 최대개수"""
-MAX_REALREG_LIMIT = int(TOTAL_INVEST_MONEY / MAX_TRADE_BUDGET)
-
 """키움서버 점검시간"""
 # 월~토: 05:05~05:10
 # 일요일: 04:00~04:30

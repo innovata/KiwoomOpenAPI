@@ -397,17 +397,6 @@ class TrServer(QBaseObject):
         v = self.storage.get(k)
         if v is None: logger.warning([self, f"요청한 '{k}' 정보는 가지고 있지 않다"])
         else: return v
-    @ctracer
-    def get_value(self, k):
-        try:
-            if k == 'd+2출금가능금액':
-                v = self.storage.get('예수금')[0][k]
-                return 0 if v is None else v
-            elif k == '종목최대투자금': return MAX_TRADE_BUDGET
-            elif k == '보유종목': return HoldServer.holds
-            else: return None
-        except Exception as e:
-            return None
 
 TrServer = TrServer()
 
@@ -489,22 +478,19 @@ class RealServer(QBaseObject):
         SetRealReg('5000', '09', '20;214;215', '1')
     @ctracer
     def SetRealReg(self, code):
-        if len(self.codes) >= MAX_REALREG_LIMIT:
-            logger.warning([self, '실시간등록최대종목수 초과하여 등록하지 않음', isscdnm(code)])
+        if code in self.codes: pass
         else:
-            if code in self.codes: pass
-            else:
-                tpls = self._autogen_param()
-                for screen_no, fidList in tpls:
-                    print([screen_no, code, fidList, '1'])
-                    try:
-                        v = SetRealReg(screen_no, code, fidList, '1')
-                    except Exception as e:
-                        logger.error(e)
-                    else:
-                        if v == 0: self.codes.append(code)
-                        else: logger.error([self, {'리턴값':v}])
-            self._report()
+            tpls = self._autogen_param()
+            for screen_no, fidList in tpls:
+                print([screen_no, code, fidList, '1'])
+                try:
+                    v = SetRealReg(screen_no, code, fidList, '1')
+                except Exception as e:
+                    logger.error(e)
+                else:
+                    if v == 0: self.codes.append(code)
+                    else: logger.error([self, {'리턴값':v}])
+        self._report()
     # @ctracer
     def SetRealRemove(self, code):
         try: self.codes.remove(code)
@@ -725,29 +711,9 @@ class KiwoomAPI(QBaseObject):
     @ctracer
     def get_data(self, k): return TrServer.get_data(k)
     @ctracer
-    def get_value(self, k): return TrServer.get_value(k)
-    @ctracer
     def get_realjango(self, code): return RealServer.get_jango(code)
 
 KiwoomAPI = KiwoomAPI()
-
-
-"""종목당 최대투자금"""
-@ftracer
-def get_cash():
-    if isMoiServer():
-        cash = MAX_TRADE_BUDGET
-    else:
-        try:
-            data = KiwoomAPI.get_data('예수금')
-            cash = data[0]['주문가능금액']
-        except Exception as e:
-            logger.error(e)
-            cash = 0
-        else:
-            print({'cash':cash, 'MAX_TRADE_BUDGET':MAX_TRADE_BUDGET})
-            cash = MAX_TRADE_BUDGET if cash >= MAX_TRADE_BUDGET else 0
-    return cash
 
 
 
