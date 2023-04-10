@@ -23,7 +23,7 @@ from kwdataengineer import datamodels
 
 
 from kiwoomapi._openapi import *
-from kiwoomapi._const import *
+from kiwoomapi import const
 
 
 ############################################################
@@ -142,7 +142,7 @@ def callprcinfo02(code, prc, pct):
     return callprcinfo00(code, nextprc)
 
 """모의투자도 실전투자 기준으로 맞추는게 맞다"""
-def get_CostRate(): return round(inumber.Percent(Cost).to_float, 4)
+def get_CostRate(): return round(inumber.Percent(const.Cost).to_float, 4)
 
 """수익률계산"""
 def calc_profit(p1, p2):
@@ -152,7 +152,7 @@ def calc_profit(p1, p2):
 
 """목표가계산"""
 def calc_goalprc(buyprc, goalpct='0.1%'):
-    cost = inumber.Percent(Cost, prec=2)
+    cost = inumber.Percent(const.Cost, prec=2)
     goal = inumber.Percent(goalpct)
     r = 1 + cost.to_float + goal.to_float
     return int(buyprc * r)
