@@ -898,7 +898,7 @@ class RealDataServer(QBaseObject):
                 print('Real데이타모니터링', trddt.logtime(), [RealType, isscdnm(Code), d])
         else: pass
 
-        """데이타처리"""
+        """데이타저장"""
         try:
             d1, d2, d3 = [Datum.copy() for i in range(3)]
             self._save01(Code, RealType, d1)
@@ -973,7 +973,7 @@ class ChejanDataServer(QBaseObject):
             # print('-'*200)
             # print(_d)
 
-        """데이타처리"""
+        """데이타저장"""
         try: self.Chegeol.insert_one(d)
         except Exception as e: pass
     @pyqtSlot(str, dict)
@@ -986,7 +986,7 @@ class ChejanDataServer(QBaseObject):
             print('-'*200)
             print('잔고데이타모니터링', trddt.logtime(), [isscdnm(code), _d])
 
-        """데이타처리"""
+        """데이타저장"""
         try: self.Jango.insert_one(d)
         except Exception as e: pass
 
@@ -1041,7 +1041,7 @@ class CondDataServer(QBaseObject):
             desc = getattr(self, ConditionName)
             print('TR조건검색모니터링', trddt.logtime(), [ConditionName, desc, {'종목수':len(CodeList)}])
 
-        """데이타처리"""
+        """데이타저장"""
         for Code in CodeList: self._record(ConditionName, 'I', Code)
     @pyqtSlot(str, str, str, str)
     def _recv_realcondition(self, Code, Type, ConditionName, ConditionIndex):
@@ -1052,7 +1052,7 @@ class CondDataServer(QBaseObject):
                 print('Real조건검색모니터링', trddt.logtime(), [ConditionName, desc, isscdnm(Code)])
             else: pass
 
-        """데이타처리"""
+        """데이타저장"""
         if Type == 'I': self._record(ConditionName, Type, Code)
         else: pass
     def _record(self, ConditionName, Type, Code):
