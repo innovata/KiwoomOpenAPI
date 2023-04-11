@@ -823,22 +823,12 @@ class TrDataServer(QBaseObject):
         #     self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
         if TrCode == 'opw00001': print(Data)
 
-
-        """데이타처리"""
-        try:
-            f = getattr(self, f'_process_{TrCode}')
-            Data = f(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
-        except Exception as e: pass
-
+        """데이타저장"""
         o = datamodels.TRList().select(TrCode)
-
-        if re.search('봉차트조회요청$', o.trname) is None: pass
-        else: self._process_charts(o.trname, RQName, Data)
-
         if o.modelExt == 0: extParam = None
         elif o.modelExt == 1: extParam = RQName
         m = datamodels.TRModel(TrCode, extParam)
-        m.save_data(Data)
+        m.save_data(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
 
     def view01(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
         print('TR데이타모니터링', [ScrNo, RQName, trcdnm(TrCode), RecordName, PrevNext, len(Data)])
@@ -863,37 +853,6 @@ class TrDataServer(QBaseObject):
                 break
         df = df.dropna(axis=1, how='all')
         return df.fillna('_')
-
-    def _process_OPT10029(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
-        for d in Data: d.update({'예상체결액':d['예상체결가'] * d['예상체결량']})
-        return Data
-    def _process_opt10027(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
-        for d in Data: d.update({'현재거래액':d['현재가'] * d['현재거래량']})
-        return Data
-    def _process_opt10001(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
-        m = datamodels.Issue()
-        for d in Data: m.update_one({'code':d['종목코드']}, {'$set':d})
-        return Data
-    def _process_opt10028(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
-        for d in Data:
-            stndprc = d['현재가'] - d['전일대비']
-            d.update({'전일종가':stndprc})
-            for e in ['시가','고가','저가']:
-                d.update({f'{e}변화율':round(d[e]/stndprc-1, 4)})
-        return Data
-    def _process_charts(self, TrName, RQName, Data):
-        t = trddt.now()
-        c1 = True if t.hour >= 16 else False
-        c2 = True if len(Data) > 0 else False
-        name = getIssName(RQName)
-        c3 = False if name is None else True
-        if c1 and c2:
-            m = database.DataModel('ChartDataSaveChecklist')
-            f = {'name':name, 'code':RQName}
-            d = f.copy()
-            d.update({TrName:trddt.systrdday()})
-            m.update_one(f, {'$set':d}, True)
-        else: pass
 
 
 """실시간데이타 수집기"""
