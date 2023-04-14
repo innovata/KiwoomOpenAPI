@@ -18,8 +18,7 @@ import trddt
 from pyqtclass import *
 
 
-from kwdataengineer import database
-from kwdataengineer import datamodels
+from kwdataengineer import database, datamodels, dataapi
 
 
 from kiwoomapi._openapi import *
@@ -51,32 +50,19 @@ def getIssueInfo(code):
     return d
 
 
-"""부하를 줄이기 위한 함수API"""
-def _setup_IssueMap():
-    m = datamodels.Issue()
-    data = m.load({}, {'code':1,'name':1})
-    o1 = BaseDataClass('종목코드-종목명 매핑')
-    o2 = BaseDataClass('종목명-종목코드 매핑')
-    for d in data:
-        setattr(o1, d['code'], d['name'])
-        setattr(o2, d['name'], d['code'])
-    return o1, o2
-
-IssueCodeName, IssueNameCode = _setup_IssueMap()
-
 def getIssName(code):
     try:
-        return getattr(IssueCodeName, code)
+        return getattr(dataapi.IssueCodeName, code)
     except Exception as e:
         logger.error([e, code])
         name = GetMasterCodeName(code)
-        setattr(IssueCodeName, code, name)
-        setattr(IssueNameCode, name, code)
+        setattr(dataapi.IssueCodeName, code, name)
+        setattr(dataapi.IssueNameCode, name, code)
         return name
 
 def getIssCode(name):
     try:
-        return getattr(IssueNameCode, name)
+        return getattr(dataapi.IssueNameCode, name)
     except Exception as e:
         logger.error(e, name)
         raise
