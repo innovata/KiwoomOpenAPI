@@ -1476,7 +1476,7 @@ class IssueAPI(QBaseObject):
             setattr(self, '매입호가R', r)
     """목표매도호가1::목표수익률%로 호가찾기"""
     # @ctracer
-    def _set_GoalProfitPct(self, pct='1%'):
+    def set_GoalProfitPct(self, pct='1%'):
         # 매입단가 기준으로 목표수익률 적용한 호가구하기
         try:
             p0 = getattr(self, '기준가')
@@ -1501,7 +1501,7 @@ class IssueAPI(QBaseObject):
             # print([self.cdnm, p0, p1, p, r])
     """목표매도호가2::목표호가%로 호가찾기"""
     # @ctracer
-    def _set_GoalCallPct(self, pct='4%'):
+    def set_GoalCallPct(self, pct='4%'):
         # 기준가로부터 목표호가%에 해당하는 호가구하기
         try:
             p0 = getattr(self, '기준가')
