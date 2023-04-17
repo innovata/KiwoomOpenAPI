@@ -1212,10 +1212,10 @@ class IssueAPI(QBaseObject):
             self._read_trjango()
             self.start_timer('VICalculateTimer', self._calc_vi, 10)
 
-            # self.start_timer('SelfDebugTimer', self._debug01, 10)
-            # self.start_timer('PrePriceRateReport', self._debug02, 10)
-            # self.start_timer('VIDebugTimer', self._debug03, 10)
-            self.start_timer('CurProfitDebugTimer', self._debug04, 10)
+            # self.start_timer('SelfDebugTimer', self.debug01, 10)
+            # self.start_timer('PrePriceRateReport', self.debug02, 10)
+            # self.start_timer('VIDebugTimer', self.debug03, 10)
+            # self.start_timer('CurProfitDebugTimer', self.debug04, 10)
     @ctracer
     def finish(self, *args):
         try:
@@ -1530,21 +1530,21 @@ class IssueAPI(QBaseObject):
             else:
                 return 0
 
-    def _debug01(self):
+    def debug01(self):
         # print('-'*100)
         # print(self.cdnm, sorted(self.__dict__))
         print(trddt.logtime(), [self.cdnm, '데이타개수:', len(self.__dict__)])
-    def _debug02(self):
+    def debug02(self):
         cols = ['목표수익률R','목표매도호가R']
         cols += [f'{n}일전종가대비변화율' for n in [5,10,15]]
         d = self.__get_attrs(cols)
         print([self.cdnm, d])
-    def _debug03(self):
+    def debug03(self):
         cols = ['VI상기준가격','VI상발동예상가격','VI상발동예상매도적정가격']
         cols += [c+'R' for c in cols]
         d = self.__get_attrs(cols)
         print([self.cdnm, d])
-    def _debug04(self):
+    def debug04(self):
         cols = ['현수익률R','목표수익률R','목표매도호가R','목표매도호가','매수호가1','매입단가','기준가','주문가능수량']
         d = self.__get_attrs(cols)
         print('수익률모니터링', self.cdnm, trddt.logtime(), d)
@@ -1739,3 +1739,19 @@ class OrderAPI(QBaseObject):
         if code == self.Issue.code:
             for k,v in d.items(): setattr(self, k, v)
         else: pass
+
+
+############################################################
+"""TrRequestAPIs"""
+############################################################
+"""일봉차트"""
+@ftracer
+def req_chart01(isscode):
+    i = TrAPI('주식일봉차트조회요청', 종목코드=isscode)
+    KiwoomAPI.SetTrReg(i.inputs, isscode, i.trcode, 0, i.screen_no)
+
+"""분봉차트"""
+@ftracer
+def req_chart02(isscode):
+    i = TrAPI('주식분봉차트조회요청', 종목코드=isscode)
+    KiwoomAPI.SetTrReg(i.inputs, isscode, i.trcode, 0, i.screen_no)
