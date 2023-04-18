@@ -81,15 +81,13 @@ def trcdnm(s):
     o = datamodels.TRList().select(s)
     return f'{o.trname}({o.trcode})'
 
+
 """호가단위"""
+CALL_PRICE_UNIT_DATA = database.DataModel('CallPriceUnit').load()
 def callprcunit(prc):
-    if prc < 2000: return 1
-    elif 2000 <= prc < 5000: return 5
-    elif 5000 <= prc < 2*pow(10,4): return 10
-    elif 2*pow(10,4) <= prc < 5*pow(10,4): return 50
-    elif 5*pow(10,4) <= prc < 20*pow(10,4): return 100
-    elif 20*pow(10,4) <= prc < 50*pow(10,4): return 500
-    elif 50*pow(10,4) <= prc: return 1000
+    for d in CALL_PRICE_UNIT_DATA:
+        if d['left'] <= prc < d['right']: return d['unit']
+        else: pass
 
 """입력가격의 호가정보"""
 def callprcinfo00(code, prc):
