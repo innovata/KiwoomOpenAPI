@@ -804,7 +804,7 @@ class TrDataServer(QBaseObject):
         """모니터링"""
         self.view01(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
         # if TrCode == 'opw00018':
-        #     self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
+            # self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
         if TrCode == 'opw00001': print(Data)
 
         """데이타저장"""
