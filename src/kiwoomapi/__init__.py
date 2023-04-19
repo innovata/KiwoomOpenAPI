@@ -116,14 +116,25 @@ def callprcinfo01(code, pct):
     return nextprc, r2
 
 """입력가격에서 몇% 높은 호가정보"""
-def callprcinfo02(code, prc, pct):
+def callprcinfo02(code, price, pct):
     r1 = inumber.Percent(pct).to_float
-    nextprc = prc
+    nextprc = price
     r2 = 0
     while r2 < r1:
         nextprc += callprcunit(nextprc)
-        r2 = nextprc/prc-1
+        r2 = nextprc/price-1
     return callprcinfo00(code, nextprc)
+
+"""기준가로부터 목표호가%에 해당하는 호가구하기"""
+def callprcinfo03(stndprc, pct):
+    nextprc = stndprc
+    r1 = inumber.Percent(pct).to_float
+    r2 = 0
+    while r2 < r1:
+        nextprc += callprcunit(nextprc)
+        r2 = round(nextprc/stndprc-1, 4)
+    return nextprc, r2
+
 
 """모의투자도 실전투자 기준으로 맞추는게 맞다"""
 def get_CostRate(): return round(inumber.Percent(const.Cost).to_float, 4)
@@ -1213,7 +1224,6 @@ class IssueAPI(QBaseObject):
             # self.start_timer('SelfDebugTimer', self.debug01, 10)
             # self.start_timer('PrePriceRateReport', self.debug02, 10)
             # self.start_timer('VIDebugTimer', self.debug03, 10)
-            # self.start_timer('CurProfitDebugTimer', self.debug04, 10)
     @ctracer
     def finish(self, *args):
         try:
@@ -1234,51 +1244,6 @@ class IssueAPI(QBaseObject):
     def req_basicInfo(self):
         self.trapi01 = TrAPI('주식기본정보요청', 종목코드=self.code)
         self.trapi01.req()
-
-    """입력가격의 호가정보"""
-    # @ctracer
-    def callprcinfo00(self, prc):
-        try: stndprc = getattr(self, '기준가')
-        except Exception as e: pass
-        else:
-            if prc > stndprc:
-                nextprc = stndprc
-                while nextprc < prc:
-                    nextprc += callprcunit(nextprc)
-            else:
-                nextprc = stndprc
-                while nextprc > prc:
-                    nextprc -= callprcunit(nextprc)
-            r = round(nextprc/stndprc-1, 4)
-            return nextprc, r
-    """입력퍼센트의 근접 상위호가정보"""
-    # @ctracer
-    def callprcinfo01(self, pct):
-        try: stndprc = getattr(self, '기준가')
-        except Exception as e: pass
-        else:
-            r1 = inumber.Percent(pct).to_float
-            nextprc = stndprc
-            r2 = 0
-            while r2 < r1:
-                nextprc += callprcunit(nextprc)
-                r2 = round(nextprc/stndprc-1, 4)
-            return nextprc, r2
-    """입력가격에서 몇% 높은 호가정보"""
-    # @ctracer
-    def callprcinfo02(self, prc, pct):
-        try: stndprc = getattr(self, '기준가')
-        except Exception as e: pass
-        else:
-            r1 = inumber.Percent(pct).to_float
-            nextprc = prc
-            r2 = 0
-            while r2 < r1:
-                nextprc += callprcunit(nextprc)
-                r2 = nextprc/prc-1
-            r = round(nextprc/stndprc-1, 4)
-            return nextprc, r
-
     @pyqtSlot(str, str, str, str, str, list)
     def _recv_trdata(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
         if TrCode == 'opt10001':
@@ -1347,23 +1312,23 @@ class IssueAPI(QBaseObject):
             p = int(p)
             if p == 0: logger.warning([self.cdnm, {'p':0}, 'VI계산기준가는 0이 될 수 없다'])
             else:
-                p, r = self.callprcinfo00(p)
+                p, r = callprcinfo00(self.code, p)
                 setattr(self, 'VI상기준가격', p)
                 setattr(self, 'VI상기준가격R', r)
 
                 # 상한가를 넘어서도 그냥 저장한다
-                p2, r2 = self.callprcinfo02(p, '10%')
+                p2, r2 = callprcinfo03(p, '10%')
                 setattr(self, 'VI상발동예상가격', p2)
                 setattr(self, 'VI상발동예상가격R', r2)
 
                 # 상한가를 넘어서면, 상한가 바로 밑 호가를 채택한다
-                p3, r3 = self.callprcinfo02(p, '9%')
+                p3, r3 = callprcinfo03(p, '9%')
                 try: top = getattr(self, '상한가')
                 except Exception as e: pass
                 else:
                     if p3 > top:
                         p3 = top - callprcunit(p3)
-                        p3, r3 = self.callprcinfo00(p3)
+                        p3, r3 = callprcinfo00(self.code, p)
                     else: pass
                 setattr(self, 'VI상발동예상매도적정가격', p3)
                 setattr(self, 'VI상발동예상매도적정가격R', r3)
@@ -1472,48 +1437,6 @@ class IssueAPI(QBaseObject):
             r = round(nextprc/stndprc-1, 4)
             setattr(self, '매입호가', nextprc)
             setattr(self, '매입호가R', r)
-    """목표매도호가1::목표수익률%로 호가찾기"""
-    # @ctracer
-    def set_GoalProfitPct(self, pct='1%'):
-        # 매입단가 기준으로 목표수익률 적용한 호가구하기
-        try:
-            p0 = getattr(self, '기준가')
-            p1 = getattr(self, '매입단가')
-        except Exception as e: pass
-        else:
-            r = inumber.Percent(pct).to_float
-            setattr(self, '목표수익률R', r)
-            # v = r + get_CostRate()
-            # # 목표호가 찾기
-            # p = p1
-            # r1 = v
-            # r2 = 0
-            # while r2 < r1:
-            #     p += callprcunit(p)
-            #     r2 = p/p1-1
-            # # 해당호가는 기준가로부터 몇%인가
-            # r = round(p/p0-1, 4)
-            #
-            # setattr(self, '목표매도호가', p)
-            # setattr(self, '목표매도호가R', r)
-            # print([self.cdnm, p0, p1, p, r])
-    """목표매도호가2::목표호가%로 호가찾기"""
-    # @ctracer
-    def set_GoalCallPct(self, pct='4%'):
-        # 기준가로부터 목표호가%에 해당하는 호가구하기
-        try:
-            p0 = getattr(self, '기준가')
-        except Exception as e: pass
-        else:
-            r1 = inumber.Percent(pct).to_float
-            p = p0
-            r = 0
-            while r < r1:
-                p += callprcunit(p)
-                r = round(p/p0-1, 4)
-            setattr(self, '목표매도호가', p)
-            setattr(self, '목표매도호가R', r)
-            # print([self.cdnm, p0, p, r])
     # @ctracer
     def get_sellable_amt(self):
         try:
@@ -1533,20 +1456,15 @@ class IssueAPI(QBaseObject):
         # print(self.cdnm, sorted(self.__dict__))
         print(trddt.logtime(), [self.cdnm, '데이타개수:', len(self.__dict__)])
     def debug02(self):
-        cols = ['목표수익률R','목표매도호가R']
-        cols += [f'{n}일전종가대비변화율' for n in [5,10,15]]
-        d = self.__get_attrs(cols)
+        cols = [f'{n}일전종가대비변화율' for n in [5,10,15]]
+        d = self.getattrs(cols)
         print([self.cdnm, d])
     def debug03(self):
         cols = ['VI상기준가격','VI상발동예상가격','VI상발동예상매도적정가격']
         cols += [c+'R' for c in cols]
-        d = self.__get_attrs(cols)
+        d = self.getattrs(cols)
         print([self.cdnm, d])
-    def debug04(self):
-        cols = ['현수익률R','목표수익률R','목표매도호가R','목표매도호가','매수호가1','매입단가','기준가','주문가능수량']
-        d = self.__get_attrs(cols)
-        print('수익률모니터링', self.cdnm, trddt.logtime(), d)
-    def __get_attrs(self, cols):
+    def getattrs(self, cols):
         d = {}
         for c in cols:
             try: v = getattr(self, c)
