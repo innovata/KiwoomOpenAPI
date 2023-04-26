@@ -83,7 +83,7 @@ def trcdnm(s):
 
 
 """호가단위"""
-CALL_PRICE_UNIT_DATA = database.DataModel('CallPriceUnit').load()
+CALL_PRICE_UNIT_DATA = datamodels.DataModel('CallPriceUnit').load()
 def callprcunit(prc):
     for d in CALL_PRICE_UNIT_DATA:
         if d['left'] <= prc < d['right']: return d['unit']
@@ -757,11 +757,11 @@ class RawDataServer(QBaseObject):
         OpenAPI.OnReceiveRealData.connect(self.OnReceiveRealData)
         OpenAPI.OnReceiveChejanData.connect(self.OnReceiveChejanData)
 
-        self.conn = database.DataModel('OnEventConnect')
-        self.msg = database.DataModel('OnReceiveMsg')
-        self.tr = database.DataModel('OnReceiveTrData')
-        self.real = database.DataModel('OnReceiveRealData')
-        self.che = database.DataModel('OnReceiveChejanData')
+        self.conn = datamodels.DataModel('OnEventConnect')
+        self.msg = datamodels.DataModel('OnReceiveMsg')
+        self.tr = datamodels.DataModel('OnReceiveTrData')
+        self.real = datamodels.DataModel('OnReceiveRealData')
+        self.che = datamodels.DataModel('OnReceiveChejanData')
 
     def _monitoring(self, *args):
         if self._monitorOn: print('쌩데이타모니터링', trddt.logtime(), args)
@@ -923,7 +923,7 @@ class RealDataServer(QBaseObject):
         try:
             m = getattr(self, k)
         except Exception as e:
-            m = database.DataModel('RealData', extParam)
+            m = datamodels.DataModel('RealData', extParam)
             setattr(self, k, m)
         finally:
             m.insert_one(Datum)
@@ -1006,7 +1006,7 @@ class CondDataServer(QBaseObject):
         self.screen_no = gen_scrNo()
         self.model = datamodels.ConditionSearchHistory()
         """조건식명-조건식설명 매핑"""
-        m = database.DataModel('ConditionSearchInfo')
+        m = datamodels.DataModel('ConditionSearchInfo')
         data = m.load({'desc':{'$ne':None}})
         for d in data: setattr(self, d['name'], d['desc'])
     @ctracer
@@ -1015,7 +1015,7 @@ class CondDataServer(QBaseObject):
         conds = GetConditionNameList()
 
         # DB저장
-        m = database.DataModel('ConditionSearchInfo')
+        m = datamodels.DataModel('ConditionSearchInfo')
         for idx, name in conds:
             m.update_one({'name':name}, {'$set':{'idx':idx, 'name':name}}, True)
 
@@ -1333,7 +1333,7 @@ class IssueAPI(QBaseObject):
                 setattr(self, 'VI상발동예상매도적정가격', p3)
                 setattr(self, 'VI상발동예상매도적정가격R', r3)
 
-                m = database.DataModel('IssueGoalProfitPct')
+                m = datamodels.DataModel('IssueGoalProfitPct')
                 f = {'name':self.name}
                 d = f.copy()
                 pct2 = inumber.Percent(r2*100, prec=2)
@@ -1507,11 +1507,11 @@ class OrderAPI(QBaseObject):
         self.orgOrderNo = orgOrderNo
         self.timeout = int(timeout)
 
-        OrderType = database.DataModel('OrderType').select({'name':{'$regex':otype}})
+        OrderType = datamodels.DataModel('OrderType').select({'name':{'$regex':otype}})
         self.ordertype = int(OrderType.code)
         self._ordertype = OrderType.name
 
-        HogaGubun = database.DataModel('HogaGubun').select({'name':{'$regex':hoga}})
+        HogaGubun = datamodels.DataModel('HogaGubun').select({'name':{'$regex':hoga}})
         self.hoga = str(HogaGubun.code)
         self._hoga = HogaGubun.name
 
@@ -1591,7 +1591,7 @@ class OrderAPI(QBaseObject):
             self.stop_timer('OrderLimitTimer')
             self.rqname = trddt.logtime()
             v = 3 if self.ordertype == 1 else 4
-            o = database.DataModel('OrderType').select({'code':v})
+            o = datamodels.DataModel('OrderType').select({'code':v})
             self.ordertype = int(o.code)
             self._ordertype = o.name
             self.prc = 0
