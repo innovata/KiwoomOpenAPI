@@ -15,7 +15,7 @@ from ipylib import inumber, iparser, idatetime
 from ipylib.datacls import BaseDataClass
 
 import trddt
-from pyqtclass import *
+from pyqtclass import QBaseObject, ThreadMDB
 
 
 from kwdataengineer import database, datamodels, dataapi
@@ -153,7 +153,7 @@ def calc_goalprc(buyprc, goalpct='0.1%'):
     return int(buyprc * r)
 
 
-def DtypeParser(k, v, dtype, unit=0):
+def KiwoomDataParser(k, v, dtype, unit=0):
     try:
         if dtype in ['int','int_abs','float']:
             v1 = inumber.iNumberV2(v, prec=4).value
@@ -168,12 +168,7 @@ def DtypeParser(k, v, dtype, unit=0):
         elif dtype == 'pct':
             return inumber.Percent(v, prec=2).to_float
         elif dtype in ['date','time','datetime']:
-            v = idatetime.DatetimeParser(v)
-            v = trddt.systrdday(v)
-            t = trddt.now()
-            if 0 <= t.hour <=5: v -= timedelta(days=1)
-            else: pass
-            return v
+            return idatetime.DatetimeParser(v)
         elif dtype == 'str':
             return None if str(v) == 'nan' else str(v)
         elif dtype in ['boolean','bool']:
@@ -331,7 +326,7 @@ class TrServer(QBaseObject):
     def _parse_value(self, trcode, item, value):
         try: o = getattr(self, f'{trcode}_{item}')
         except Exception as e: return value
-        else: return DtypeParser(o.item, value, o.dtype, o.unit)
+        else: return KiwoomDataParser(o.item, value, o.dtype, o.unit)
     def _build_trdata(self, TrCode, RQName, AccountNo):
         if TrCode in self.trcodes:
             n = GetRepeatCnt(TrCode, RQName)
@@ -432,7 +427,7 @@ class RealServer(QBaseObject):
     def _parse_value(self, fid, value):
         try: o = getattr(self, fid)
         except Exception as e: return value
-        else: return DtypeParser(o.name, value, o.dtype, o.unit)
+        else: return KiwoomDataParser(o.name, value, o.dtype, o.unit)
     def _build_realdatum(self, Code, RealType):
         if RealType in self.realtypes:
             d = {}
@@ -814,8 +809,7 @@ class TrDataServer(QBaseObject):
     def _recv_trdata(self, ScrNo, RQName, TrCode, RecordName, PrevNext, Data):
         """모니터링"""
         self.view01(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
-        # if TrCode == 'opw00018':
-            # self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
+        # self.view02(ScrNo, RQName, TrCode, RecordName, PrevNext, Data)
         if TrCode == 'opw00001': print(Data)
 
         """데이타저장"""
@@ -844,7 +838,7 @@ class TrDataServer(QBaseObject):
         for c in list(df.columns):
             if re.search('시간$|일자$|날짜$', c) is None: pass
             else:
-                df = df.set_index(c)
+                df = df.set_index(c).sort_index()
                 break
         df = df.dropna(axis=1, how='all')
         return df.fillna('_')

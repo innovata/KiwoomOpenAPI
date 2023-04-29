@@ -67,7 +67,7 @@ class kiwoomapi_openapi(AppTester):
     def __init__(self): super().__init__()
     def run(self):
         self.testNo(501)
-        self.testNo(1)
+        self.testNo(107)
 
     """#################### OpenAPI ####################"""
     """로그인-버전처리"""
@@ -285,6 +285,10 @@ class kiwoomapi_openapi(AppTester):
         o.req()
     def test106(self):
         o = openapi.TrAPI('예상체결등락률상위요청', maxLoop=1)
+        self.set_object(o)
+        o.req()
+    def test107(self):
+        o = openapi.TrAPI('주식일봉차트조회요청', maxLoop=1, 종목코드='179290')
         self.set_object(o)
         o.req()
 
