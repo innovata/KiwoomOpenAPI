@@ -1,3 +1,4 @@
+pip
 pytest
 PyQt5==5.15.1
 pymongo==3.12.0
