@@ -2,13 +2,62 @@
 from test._testenv import *
 from ipylib.datacls import BaseDataClass
 
-from PyQt5.QtCore import QObject, pyqtSlot
+
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
+
 
 import kiwoomapi
-from kiwoomapi import OpenAPI
+from kiwoomapi import *
 
 
 issname, isscode = '삼성전자', '005930'
+
+
+
+class LoginAPI(QObject):
+    ConnectSent = pyqtSignal(int)
+    LoginSucceeded = pyqtSignal()
+    LoginFailed = pyqtSignal()
+
+    @ctracer
+    def __init__(self):
+        super().__init__()
+        OpenAPI.OnEventConnect.connect(self.OnEventConnect)
+    @ctracer
+    def CommConnect(self, acct_win=False):
+        self._acct_win = acct_win
+        v = CommConnect()
+        self.CommConnectReturn = (v, type(v))
+        self._event_loop = QEventLoop()
+        self._event_loop.exec()
+    @ctracer
+    @pyqtSlot(int)
+    def OnEventConnect(self, ErrCode):
+        self.ErrCode = ErrCode
+        self.ConnectState = GetConnectState()
+        if ErrCode == 0:
+            self._set_login_info()
+
+            pretty_title('로그인/계좌 정보')
+            pp.pprint(self.__dict__)
+
+            """계좌번호입력창"""
+            if self._acct_win: ShowAccountWindow()
+
+            """서버가 준비된 다음 마지막으로 신호를 보내라"""
+            self.LoginSucceeded.emit()
+        else:
+            logger.critical(['로그인실패 --> 시스템재시작'])
+            self.LoginFailed.emit()
+        
+        self.ConnectSent.emit(ErrCode)
+        self._event_loop.exit()
+    @ctracer
+    def _set_login_info(self):
+        items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
+        for item in items:
+            v = GetLoginInfo(item)
+            setattr(self, item, v)
 
 
 class MainTester(QObject):
@@ -17,21 +66,31 @@ class MainTester(QObject):
     def run(self):
         self.login()
     def login(self):
-        login = kiwoomapi.LoginAPI()
-        login.ConnectSent.connect(self.recv_login)
-        login.CommConnect()
+        OpenAPI.OnEventConnect.connect(self.recv_login)
+        v = CommConnect()
+        print(['CommConnect-->', v, type(v)])
+        self._event_loop = QEventLoop()
+        self._event_loop.exec()
     @pyqtSlot(int)
     def recv_login(self, ErrCode): 
         print({'ErrCode':ErrCode})
-        for i in [4]:
+        self._event_loop.exit()
+        self.__run__()
+    
+    def __run__(self):
+        for i in [1,2]:
             func = f'test{str(i).zfill(2)}'
             getattr(self, func)()
 
     """로그인-버전처리"""
     def test01(self):
-        OpenAPI.OnEventConnect.connect(self.OnEventConnect)
-        v = kiwoomapi.CommConnect()
-        print(['CommConnect', v, type(v)])
+        v = GetConnectState()
+        print(['GetConnectState-->', v, type(v)])
+        items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
+        for item in items:
+            v = GetLoginInfo(item)
+            print(['GetLoginInfo-->', v, type(v)])
+
     """기타함수"""
     def test02(self):
         v = kiwoomapi.GetBranchCodeName()
