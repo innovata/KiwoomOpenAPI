@@ -6,8 +6,8 @@ from ipylib.datacls import BaseDataClass
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
 
 
-import kiwoomapi
-from kiwoomapi import *
+import kiwoomapi._openapi as _openapi
+from kiwoomapi._openapi import *
 
 
 issname, isscode = '삼성전자', '005930'
@@ -93,35 +93,35 @@ class MainTester(QObject):
 
     """기타함수"""
     def test02(self):
-        v = kiwoomapi.GetBranchCodeName()
+        v = _openapi.GetBranchCodeName()
         print(['GetBranchCodeName', v, type(v)])
         if not isinstance(v, list): raise
 
-        v = kiwoomapi.GetCodeListByMarket('0')
+        v = _openapi.GetCodeListByMarket('0')
         print(['GetCodeListByMarket', v, type(v)])
         if not isinstance(v, list): raise
 
-        v = kiwoomapi.GetMasterCodeName(isscode)
+        v = _openapi.GetMasterCodeName(isscode)
         print(['GetMasterCodeName', v, type(v)])
         if not isinstance(v, str): raise
 
-        v = kiwoomapi.GetMasterConstruction(isscode)
+        v = _openapi.GetMasterConstruction(isscode)
         print(['GetMasterConstruction', v, type(v)])
         if not isinstance(v, str): raise
 
-        v = kiwoomapi.GetMasterLastPrice(isscode)
+        v = _openapi.GetMasterLastPrice(isscode)
         print(['GetMasterLastPrice', v, type(v)])
         if not isinstance(v, int): raise
 
-        v = kiwoomapi.GetMasterListedStockDate(isscode)
+        v = _openapi.GetMasterListedStockDate(isscode)
         print(['GetMasterListedStockDate', v, type(v)])
         if not isinstance(v, datetime): raise
 
-        v = kiwoomapi.GetMasterListedStockCnt(isscode)
+        v = _openapi.GetMasterListedStockCnt(isscode)
         print(['GetMasterListedStockCnt', v, type(v)])
         if not isinstance(v, int): raise
 
-        v = kiwoomapi.GetMasterStockState(isscode)
+        v = _openapi.GetMasterStockState(isscode)
         print(['GetMasterStockState', v, type(v)])
         if not isinstance(v, dict): raise
 
@@ -131,23 +131,23 @@ class MainTester(QObject):
         #     print(['GetUpjongCode', ujcd, v, type(v)])
         #     if not isinstance(v, list): raise
 
-        v = kiwoomapi.GetServerGubun()
+        v = _openapi.GetServerGubun()
         print(['GetServerGubun',v, type(v)])
         if not isinstance(v, str): raise
 
-        v = kiwoomapi.GetUpjongNameByCode('002')
+        v = _openapi.GetUpjongNameByCode('002')
         print(['GetUpjongNameByCode',v, type(v)])
         if not isinstance(v, str): raise
 
-        v = kiwoomapi.IsOrderWarningETF(isscode)
+        v = _openapi.IsOrderWarningETF(isscode)
         print(['IsOrderWarningETF',v, type(v)])
         if not isinstance(v, bool): raise
 
-        v = kiwoomapi.IsOrderWarningStock(isscode)
+        v = _openapi.IsOrderWarningStock(isscode)
         print(['IsOrderWarningStock',v, type(v)])
         if not isinstance(v, bool): raise
 
-        v = kiwoomapi.GetMasterStockInfo(isscode)
+        v = _openapi.GetMasterStockInfo(isscode)
         print(['GetMasterStockInfo',v, type(v)])
         if not isinstance(v, dict): raise
 
@@ -164,63 +164,63 @@ class MainTester(QObject):
         #         print(['SetInputValue', e, d])
 
         pretty_title('케이스1')
-        v = kiwoomapi.SetInputValue('종목코드', isscode)
+        v = _openapi.SetInputValue('종목코드', isscode)
         print(['SetInputValue', v, type(v)])
 
-        v = kiwoomapi.CommRqData('요청명','opt10001',0,'8000')
+        v = _openapi.CommRqData('요청명','opt10001',0,'8000')
         print(['CommRqData', v, type(v)])
 
-        v = kiwoomapi.GetRepeatCnt('opt10001', '요청명')
+        v = _openapi.GetRepeatCnt('opt10001', '요청명')
         print(['GetRepeatCnt', v, type(v)])
 
         pretty_title('케이스2::GetRepeatCnt 몇개?')
         sleep(2)
-        kiwoomapi.SetInputValue('종목코드', isscode)
-        kiwoomapi.SetInputValue('기준일자', '20230210')
-        kiwoomapi.SetInputValue('수정주가구분', '1')
-        v = kiwoomapi.CommRqData(isscode,'opt10081',0,'8001')
+        _openapi.SetInputValue('종목코드', isscode)
+        _openapi.SetInputValue('기준일자', '20230210')
+        _openapi.SetInputValue('수정주가구분', '1')
+        v = _openapi.CommRqData(isscode,'opt10081',0,'8001')
         print(['CommRqData', v, type(v)])
-        v = kiwoomapi.GetRepeatCnt('opt10081', isscode)
+        v = _openapi.GetRepeatCnt('opt10081', isscode)
         print(['GetRepeatCnt', v, type(v)])
 
         pretty_title('케이스3::인풋없이 요청만 하면 에러')
         sleep(2)
-        v = kiwoomapi.CommRqData('요청명','opt10001',0,'8000')
+        v = _openapi.CommRqData('요청명','opt10001',0,'8000')
         print(['CommRqData', v, type(v)])
     """실시간데이터처리"""
     def test04(self):
-        v = kiwoomapi.SetRealReg('5000', '09', '20;214;215', '1')
+        v = _openapi.SetRealReg('5000', '09', '20;214;215', '1')
         print(['SetRealReg->', v, type(v)])
 
-        v = kiwoomapi.SetRealRemove('ALL', 'ALL')
+        v = _openapi.SetRealRemove('ALL', 'ALL')
         print(['SetRealRemove->', v, type(v)])
 
-        v = kiwoomapi.GetCommRealData(isscode, '20')
+        v = _openapi.GetCommRealData(isscode, '20')
         print(['GetCommRealData->', v, type(v)])
 
     """조건검색"""
     def test05(self):
-        v = kiwoomapi.GetConditionLoad()
+        v = _openapi.GetConditionLoad()
         print(['GetConditionLoad->', v, type(v)])
 
-        v = kiwoomapi.GetConditionNameList()
+        v = _openapi.GetConditionNameList()
         print(['GetConditionNameList->', v, type(v)])
 
         conds = v 
         for i, (Index, ConditionName) in enumerate(conds):
-            v = kiwoomapi.SendCondition('9000', ConditionName, Index, 1)
+            v = _openapi.SendCondition('9000', ConditionName, Index, 1)
             print(i, ['SendCondition->', v, type(v)])
             sleep(0.2)
             # break
 
-        v = kiwoomapi.SendConditionStop('9000', '0000', '005')
+        v = _openapi.SendConditionStop('9000', '0000', '005')
         print(['SendConditionStop->', v, type(v)])
     """주문과-잔고처리"""
     def test06(self):
-        v = kiwoomapi.SendOrder('rqname','9000','8041895711',1,isscode,1,2000,'00','')
+        v = _openapi.SendOrder('rqname','9000','8041895711',1,isscode,1,2000,'00','')
         print(['SendOrder', v, type(v)])
 
-        v = kiwoomapi.GetChejanData(910)
+        v = _openapi.GetChejanData(910)
         print(['GetChejanData', v, type(v)])
 
 
