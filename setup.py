@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="kiwoomapi",
+    name="KiwoomAPI",
     version="0.0.3",
     author="innovata sambong",
     author_email="iinnovata@gmail.com",
