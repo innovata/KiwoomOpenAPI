@@ -22,6 +22,6 @@ setuptools.setup(
     packages=setuptools.find_packages('src'),
     python_requires=">=3.8",
     install_requires=[
-        'PyQt5', 'ipylib', 
+        'PyQt5', 'ipylib', 'trddt',
     ],
 )

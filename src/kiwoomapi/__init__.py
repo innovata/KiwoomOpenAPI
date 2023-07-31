@@ -18,11 +18,21 @@ from ipylib.datacls import BaseDataClass
 
 import trddt
 from pyqtclass import QBaseObject
-from configuration import CONFIG
 
 
 from kiwoomapi._openapi import *
-from openapi._api import *
+from kiwoomapi import mdb, const  
+
+
+
+
+############################################################
+"""General Functions"""
+############################################################
+def clean_issueCode(code):
+    m = re.search('([A-Z]*)(\d+$)|([A-Z]*)(\d+[A-Z]$)', code)
+    code = m[2]
+    return code
 
 
 
@@ -81,8 +91,10 @@ def isMoiServer(): return True if GetServerGubun() == '모의' else False
 
 
 """호가단위"""
-def callprcunit(prc): return dataapi.callprcunit(prc)
-
+def callprcunit(prc):
+    for d in mdb.CALL_PRICE_UNIT_DATA:
+        if d['left'] <= prc < d['right']: return d['unit']
+        else: pass
 
 """입력가격의 호가정보"""
 def callprcinfo00(code, prc):
@@ -135,7 +147,7 @@ def callprcinfo03(stndprc, pct):
 
 
 """모의투자도 실전투자 기준으로 맞추는게 맞다"""
-def get_CostRate(): return round(inumber.Percent(CONFIG.Cost).to_float, 4)
+def get_CostRate(): return round(inumber.Percent(const.Cost).to_float, 4)
 
 
 """수익률계산"""
@@ -147,7 +159,7 @@ def calc_profit(p1, p2):
 
 """목표가계산"""
 def calc_goalprc(buyprc, goalpct='0.1%'):
-    cost = inumber.Percent(CONFIG.Cost, prec=2)
+    cost = inumber.Percent(const.Cost, prec=2)
     goal = inumber.Percent(goalpct)
     r = 1 + cost.to_float + goal.to_float
     return int(buyprc * r)
@@ -195,10 +207,14 @@ SNG = ScreenNumberGenerator()
 def gen_scrNo(): return SNG.gen()
 
 
+
+# 프로세스 자체를 재시작해야 키움증권OpenAPI 32비트 COM 객체를 리셋할 수 있다
 @ftracer
 def restart():
     filepath = os.environ['RUN_FILE_PATH']
     subprocess.run([sys.executable, os.path.realpath(filepath)] + sys.argv[1:])
+
+
 
 
 ############################################################
@@ -478,7 +494,7 @@ class TrAPI(QBaseObject):
             try:
                 """기존잔고에 신규잔고를 합산"""
                 li = getattr(self, 'TR계좌잔고')
-                for d in Data: d['종목번호'] = dataapi.clean_issueCode(d['종목번호'])
+                for d in Data: d['종목번호'] = clean_issueCode(d['종목번호'])
                 li += Data
                 df = pd.DataFrame(li).\
                     drop_duplicates(keep='first', subset=['종목명']).\
@@ -634,7 +650,7 @@ class RealAPI(QBaseObject):
     @pyqtSlot(str, int, str)
     def OnReceiveChejanData(self, Gubun, ItemCnt, FIdList):
         d = self._build_ChejanDatum(FIdList)
-        code = dataapi.clean_issueCode(d['종목코드,업종코드'])
+        code = clean_issueCode(d['종목코드,업종코드'])
         if Gubun == '0':
             self.ChegeolSent.emit(code, d['주문번호'], d)
         elif Gubun == '1':
