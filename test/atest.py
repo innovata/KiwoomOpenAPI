@@ -6,8 +6,7 @@ from ipylib.datacls import BaseDataClass
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
 
 
-import kiwoomapi._openapi as _openapi
-from kiwoomapi._openapi import *
+from kiwoomapi import *
 
 
 issname, isscode = '삼성전자', '005930'
@@ -63,22 +62,28 @@ class LoginAPI(QObject):
 class MainTester(QObject):
 
     def __init__(self):  super().__init__()
+   
     def run(self):
         self.login()
+   
+    @ctracer
     def login(self):
         OpenAPI.OnEventConnect.connect(self.recv_login)
         v = CommConnect()
         print(['CommConnect-->', v, type(v)])
         self._event_loop = QEventLoop()
         self._event_loop.exec()
+   
+    @ctracer
     @pyqtSlot(int)
     def recv_login(self, ErrCode): 
         print({'ErrCode':ErrCode})
         self._event_loop.exit()
         self.__run__()
     
+    
     def __run__(self):
-        for i in [1,2]:
+        for i in [1]:
             func = f'test{str(i).zfill(2)}'
             getattr(self, func)()
 
@@ -86,10 +91,15 @@ class MainTester(QObject):
     def test01(self):
         v = GetConnectState()
         print(['GetConnectState-->', v, type(v)])
+
         items = ['GetServerGubun','ACCLIST','ACCOUNT_CNT','USER_ID','USER_NAME','KEY_BSECGB','FIREW_SECGB']
         for item in items:
             v = GetLoginInfo(item)
             print(['GetLoginInfo-->', v, type(v)])
+
+        v = isMoiServer()
+        print(['isMoiServer-->', v, type(v)])
+
 
     """기타함수"""
     def test02(self):
@@ -152,6 +162,7 @@ class MainTester(QObject):
         if not isinstance(v, dict): raise
 
         # kiwoomapi.ShowAccountWindow()
+   
     """TR조회"""
     def test03(self):
         # m = datamodels.TRInput()
@@ -187,6 +198,7 @@ class MainTester(QObject):
         sleep(2)
         v = _openapi.CommRqData('요청명','opt10001',0,'8000')
         print(['CommRqData', v, type(v)])
+   
     """실시간데이터처리"""
     def test04(self):
         v = _openapi.SetRealReg('5000', '09', '20;214;215', '1')
@@ -215,6 +227,7 @@ class MainTester(QObject):
 
         v = _openapi.SendConditionStop('9000', '0000', '005')
         print(['SendConditionStop->', v, type(v)])
+   
     """주문과-잔고처리"""
     def test06(self):
         v = _openapi.SendOrder('rqname','9000','8041895711',1,isscode,1,2000,'00','')
