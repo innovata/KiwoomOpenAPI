@@ -13,18 +13,46 @@ from PyQt5.QAxContainer import QAxWidget
 from ipylib.idebug import *
 from ipylib import idatetime
 
-import trddt 
-
 
 
 
 OpenAPI = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
 
 
-def dynamicCall(*args): return OpenAPI.dynamicCall(*args)
+def dynamicCall(*args): 
+    print()
+    print({'args': args})
+    funcExp = args[0]
+    params = list(args[1:])
+    print({'funcExp':funcExp, 'params':params})
+
+    # 데이터타입 발라내기
+    m = re.search('\((.+)\)', funcExp)
+    if m is None: 
+        pass 
+    else:
+        text = m.group(1)
+        dtypes = text.split(',')
+        # print({'dtypes': dtypes})
+
+        _params = []
+        for dtype, param in zip(dtypes, params):
+            if dtype == 'QString':
+                _params.append(str(param))
+            elif dtype == 'int':
+                _params.append(int(param))
+        # print({'_params': _params})
+        params = _params.copy()
+    
+    print({'funcExp':funcExp, 'params':params})
+    try:
+        return OpenAPI.dynamicCall(funcExp, params)
+    except Exception as e:
+        logger.error([e, {'args': args}])
 
 # @ftracer
-def KOA_Functions(func, param): return dynamicCall('KOA_Functions(QString,QString)', [func, param])
+def KOA_Functions(func, param): 
+    return dynamicCall('KOA_Functions(QString,QString)', func, param)
 
 
 
@@ -63,36 +91,37 @@ def GetBranchCodeName():
 
 @ftracer
 def GetCodeListByMarket(mktcd):
-    s = dynamicCall('GetCodeListByMarket(QString)', [mktcd])
+    s = dynamicCall('GetCodeListByMarket(QString)', mktcd)
     codes = s.strip().split(';')
     codes = [c for c in codes if len(c.strip()) > 0]
     return codes
 
 # @ftracer
-def GetMasterCodeName(code): return dynamicCall('GetMasterCodeName(QString)', [code])
+def GetMasterCodeName(code): return dynamicCall('GetMasterCodeName(QString)', code)
 
 # @ftracer
-def GetMasterConstruction(code): return dynamicCall('GetMasterConstruction(QString)', [code])
+def GetMasterConstruction(code): 
+    return dynamicCall('GetMasterConstruction(QString)', code)
 
 """전일종가==기준가"""
 # @ftracer
 def GetMasterLastPrice(code):
-    v = dynamicCall('GetMasterLastPrice(QString)', [code])
+    v = dynamicCall('GetMasterLastPrice(QString)', code)
     return int(v.strip())
 
 """상장일"""
 # @ftracer
 def GetMasterListedStockDate(code):
-    s = dynamicCall('GetMasterListedStockDate(QString)', [code])
+    s = dynamicCall('GetMasterListedStockDate(QString)', code)
     return idatetime.DatetimeParser(s)
 
 # @ftracer
-def GetMasterListedStockCnt(code): return dynamicCall('GetMasterListedStockCnt(QString)', [code])
+def GetMasterListedStockCnt(code): return dynamicCall('GetMasterListedStockCnt(QString)', code)
 
 # @ftracer
 def GetMasterStockState(code):
     try:
-        s = dynamicCall('GetMasterStockState(QString)', [code])
+        s = dynamicCall('GetMasterStockState(QString)', code)
         s = s.strip()
         _m = re.search('증거금(\d+%)', s)
         # print(_m, _m[1])
@@ -131,7 +160,9 @@ def GetUpjongCode(ujcd):
 
 """업종이름"""
 @ftracer
-def GetUpjongNameByCode(ujcd): return KOA_Functions('GetUpjongNameByCode', ujcd)
+def GetUpjongNameByCode(ujcd): 
+    v = KOA_Functions('GetUpjongNameByCode', ujcd)
+    return v.strip()
 
 """ETF 투자유의 종목 여부"""
 # @ftracer
@@ -178,6 +209,7 @@ def ShowAccountWindow(): return KOA_Functions('ShowAccountWindow', "")
 @ftracer
 def GetConditionLoad(): return dynamicCall('GetConditionLoad()')
 
+"""(Index, ConditionName) 리스트"""
 @ftracer
 def GetConditionNameList():
     v = dynamicCall('GetConditionNameList()')
@@ -185,16 +217,15 @@ def GetConditionNameList():
     conds = [e for e in conds if len(e.strip()) > 0]
     conds = [cond.split('^') for cond in conds]
     # print(['GetConditionNameList-->', len(conds), conds])
-    # (Index, ConditionName) 리스트
     return conds
 
 @ftracer
 def SendCondition(ScrNo, ConditionName, Index, Search=1):
     v = dynamicCall('SendCondition(QString,QString,int,int)', 
-                    [ScrNo, ConditionName, int(Index), int(Search)])
+                    ScrNo, ConditionName, Index, Search)
     
-    d = {1:'성공', 0:'실패'}
-    print(['SendCondition-->', ScrNo, ConditionName, Index, Search, d[v]])
+    msg = {1:'성공', 0:'실패'}
+    logger.debug([ScrNo, ConditionName, Index, Search, msg[v]])
     t = datetime.now()
     if t.weekday() in [5,6]:
         logger.warning(['주말 또는 장중이 아니면 실패처리된다'])
@@ -203,17 +234,17 @@ def SendCondition(ScrNo, ConditionName, Index, Search=1):
 @ftracer 
 def SendConditionStop(ScrNo, ConditionName, Index):
     v = dynamicCall('SendCondition(QString,QString,int)', 
-                    [ScrNo, ConditionName, int(Index)])
+                    ScrNo, ConditionName, Index)
     return v
 
 @ftracer
 def SetRealReg(ScrNo, CodeList, FidList, OptType='1'):
     return dynamicCall('SetRealReg(QString,QString,QString,QString)', 
-                       [ScrNo, CodeList, FidList, OptType])
+                       ScrNo, CodeList, FidList, OptType)
 
 @ftracer
 def SetRealRemove(ScrNo='ALL', DelCode='ALL'):
-    return dynamicCall('SetRealRemove(QString,QString)', [ScrNo, DelCode])
+    return dynamicCall('SetRealRemove(QString,QString)', ScrNo, DelCode)
 
 
 
@@ -223,27 +254,31 @@ def SetRealRemove(ScrNo='ALL', DelCode='ALL'):
 ############################################################
 @ftracer
 def CommRqData(RQName, TrCode, PrevNext, ScrNo):
-    return dynamicCall('CommRqData(QString,QString,int,QString)', [RQName, TrCode, PrevNext, ScrNo])
+    return dynamicCall('CommRqData(QString,QString,int,QString)', 
+                       RQName, TrCode, PrevNext, ScrNo)
 
 # @ftracer
 def GetCommData(TrCode, RecordName, Index, ItemName):
-    return dynamicCall('GetCommData(QString,QString,int,QString)', [TrCode, RecordName, Index, ItemName])
+    v = dynamicCall('GetCommData(QString,QString,int,QString)', 
+                    TrCode, RecordName, Index, ItemName)
+    return v.strip()
 
 @ftracer
 def GetCommDataEx(TrCode, RecordName):
-    return dynamicCall('GetCommDataEx(QString,QString)', [TrCode, RecordName])
+    return dynamicCall('GetCommDataEx(QString,QString)', TrCode, RecordName)
 
 # @ftracer
 def GetCommRealData(Code, Fid):
-    return dynamicCall('GetCommRealData(QString,QString)', [Code, Fid])
+    v = dynamicCall('GetCommRealData(QString,QString)', Code, Fid)
+    return v.strip()
 
 @ftracer
 def GetRepeatCnt(TrCode, RQName):
-    return dynamicCall('GetRepeatCnt(QString,QString)', [TrCode, RQName])
+    return dynamicCall('GetRepeatCnt(QString,QString)', TrCode, RQName)
 
 @ftracer
 def SetInputValue(ID, Value):
-    return dynamicCall('SetInputValue(QString,QString)', [ID, Value])
+    return dynamicCall('SetInputValue(QString,QString)', ID, Value)
 
 
 
@@ -253,42 +288,16 @@ def SetInputValue(ID, Value):
 ############################################################
 # @ftracer
 def GetChejanData(Fid):
-    return dynamicCall('GetChejanData(int)', [Fid])
+    return dynamicCall('GetChejanData(int)', Fid)
 
 @ftracer
-def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo):
-    return dynamicCall(
-        'SendOrder(QString,QString,QString,int,QString,int,int,QString,QString)',
-        [RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo]
-    )
+def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
+    try:
+        return dynamicCall(
+            'SendOrder(QString,QString,QString,int,QString,int,int,QString,QString)',
+            RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo
+        )
+    except Exception as e:
+        logger.error(e)
 
 
-
-
-
-############################################################
-"""MyFunctionalAPIs"""
-############################################################
-
-def isMoiServer(): return True if GetServerGubun() == '모의' else False
-
-
-def getIssueInfo(code):
-    v1 = GetMasterLastPrice(code)
-    d = {
-        'code': code,
-        'name': GetMasterCodeName(code),
-        'lst_dt': GetMasterListedStockDate(code),
-        'n_shrs': GetMasterListedStockCnt(code),
-        'supervision': GetMasterConstruction(code),
-        '전일종가': v1,
-        '기준가': v1,
-        'warningETF': IsOrderWarningETF(code),
-        'warningStock': IsOrderWarningStock(code),
-        'updated_dt': trddt.today(),
-    }
-    d3 = GetMasterStockInfo(code)
-    d.update(d3)
-    d4 = GetMasterStockState(code)
-    d.update(d4)
-    return d

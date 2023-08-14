@@ -1,11 +1,6 @@
-pip
-pytest
-
-
 PyQt5==5.15.1
 
 
 ipylib
-trddt
 
 
