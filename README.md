@@ -22,9 +22,12 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
 
 로그인 객체 구현 예시:
 
+    from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
     import kiwoomapi as api
     
     class LoginAPI(QObject):
+
+        LoginSucceeded = pyqtSignal()
 
         def __init__(self):
             OpenAPI.OnReceiveMessage.connect(self.__recv_msg__)
@@ -37,6 +40,10 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
         @pyqtSlot(int)
         def __recv_login__(self, ErrCode):
             print(ErrCode)
+            if ErrCode == 0:
+                self.LoginSucceeded.emit()
+            else:
+                print('로그인 실패)
             self._event_loop.exit()
 
         def login(self):
