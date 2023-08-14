@@ -24,6 +24,7 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
 
     from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
     import kiwoomapi as api
+    from kiwoomapi import OpenAPI
     
     class LoginAPI(QObject):
 
