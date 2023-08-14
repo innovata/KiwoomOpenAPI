@@ -296,3 +296,19 @@ def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
         logger.error(e)
 
 
+
+
+
+
+############################################################
+"""MY-FunctionalAPIs"""
+############################################################
+
+from kiwoomapi import const 
+
+"""종목가격의 해당 동적 호가단위"""
+def CallPriceUnit(prc):
+    for d in const.CallPriceUnit:
+        if d['left'] <= prc < d['right']: 
+            return d['unit']
+        
