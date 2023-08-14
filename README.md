@@ -22,6 +22,7 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
 
 로그인 객체 구현 예시:
 
+    from PyQt5.QtWidgets import QApplication
     from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
     import kiwoomapi as api
     from kiwoomapi import OpenAPI
@@ -53,8 +54,13 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
             self._event_loop = QEventLoop()
             self._event_loop.exec()
 
+
+    app = QApplication(sys.argv)
+    
     LoginAPI = LoginAPI()
     LoginAPI.login()
+
+    sys.exit(app.exec())
 
 
 
