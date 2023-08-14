@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="kiwoomapi",
-    version="0.4.6",
+    version="0.4.7",
     author="innovata sambong",
     author_email="iinnovata@gmail.com",
     description='Windows COM 기반으로 파이썬 32비트로만 동작하는 키움증권 오픈API 패키지',

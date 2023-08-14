@@ -9,12 +9,14 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
 
 ## 사용법
 
-데이터 요청할 때
+데이터 요청할 때는 패키지의 함수들을 사용해야 한다.
 
     import kiwoomapi as api
     api.CommConnect()
 
-데이터 수신할 때 (PyQt QAxWidget 객체사용)
+데이터 수신할 때는 PyQt-QAxWidget 객체인 'OpenAPI'의 pyqtSinal 을 사용해야 한다.
+
+키움증권으로부터 메시지를 수신하기 위해서는 아래와 같이 코드를 작성해야 한다. 
 
     from kiwoomapi import OpenAPI
     OpenAPI.OnReceiveMessage.connect(YOUR_METHOD) 
