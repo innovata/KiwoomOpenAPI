@@ -20,11 +20,8 @@ OpenAPI = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
 
 
 def dynamicCall(*args): 
-    print()
-    print({'args': args})
     funcExp = args[0]
     params = list(args[1:])
-    print({'funcExp':funcExp, 'params':params})
 
     # 데이터타입 발라내기
     m = re.search('\((.+)\)', funcExp)
@@ -33,7 +30,6 @@ def dynamicCall(*args):
     else:
         text = m.group(1)
         dtypes = text.split(',')
-        # print({'dtypes': dtypes})
 
         _params = []
         for dtype, param in zip(dtypes, params):
@@ -41,10 +37,9 @@ def dynamicCall(*args):
                 _params.append(str(param))
             elif dtype == 'int':
                 _params.append(int(param))
-        # print({'_params': _params})
+
         params = _params.copy()
     
-    print({'funcExp':funcExp, 'params':params})
     try:
         return OpenAPI.dynamicCall(funcExp, params)
     except Exception as e:
