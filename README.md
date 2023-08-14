@@ -31,6 +31,7 @@ KiwoomTraderV2 프로젝트 패키지의 내부 모듈을 독립적인 패키지
         LoginSucceeded = pyqtSignal()
 
         def __init__(self):
+            super().__init__()
             OpenAPI.OnReceiveMessage.connect(self.__recv_msg__)
             OpenAPI.OnEventConnect.connect(self.__recv_login__)
 
