@@ -6,7 +6,7 @@ from ipylib.datacls import BaseDataClass
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
 
 
-from kiwoomapi import *
+from kiwoomapi.core import *
 
 
 issname, isscode = '삼성전자', '005930'
@@ -16,8 +16,11 @@ issname, isscode = '삼성전자', '005930'
 
 class MainTester(QObject):
 
-    def __init__(self):  
-        super().__init__()
+    LoginSucceeded = pyqtSignal()
+
+    def __init__(self): super().__init__()
+   
+    def run(self):
         OpenAPI.OnEventConnect.connect(self.__recv_login__)
         OpenAPI.OnReceiveMsg.connect(self.__recv_msg__)
         OpenAPI.OnReceiveTrData.connect(self.__recv_trdata__)
@@ -26,8 +29,8 @@ class MainTester(QObject):
         OpenAPI.OnReceiveTrCondition.connect(self.__recv_trcond__)
         OpenAPI.OnReceiveRealCondition.connect(self.__recv_realcond__)
         OpenAPI.OnReceiveChejanData.connect(self.__recv_chejan__)
-   
-    def run(self):
+        self.LoginSucceeded.connect(self.__run_test__)
+
         self.login()
    
     @ctracer
@@ -47,12 +50,14 @@ class MainTester(QObject):
     def __recv_login__(self, ErrCode): 
         print({'ErrCode':ErrCode})
         self._event_loop.exit()
-        
-        self.test41()
-        # self.__run_many__()
+        self.LoginSucceeded.emit()
+
+    def __run_test__(self):
+        # self.test41()
+        self.__run_many__()
 
     def __run_many__(self):
-        for i in range(1, 40):
+        for i in range(1, 50):
             func = f'test{str(i).zfill(2)}'
             try:
                 testFunc = getattr(self, func)
@@ -260,7 +265,7 @@ class MainTester(QObject):
         pass 
         
     """조건검색"""
-    def test30(self):
+    def test40(self):
         pretty_title("""조건검색""")
 
         v = GetConditionLoad()
@@ -269,14 +274,14 @@ class MainTester(QObject):
         if v != 1: raise
 
     """조건검색::정지"""
-    def test31(self):
+    def test41(self):
         pretty_title("""조건검색::정지""")
 
         v = SendConditionStop('9000', '0000', '005')
         print(['SendConditionStop->', v, type(v)])
    
 
-   ############################################################
+    ############################################################
     """주문과-잔고처리 -----> 모의투자 환경에서만 테스트해라!!!"""
     ############################################################
     
@@ -286,7 +291,7 @@ class MainTester(QObject):
         pass 
 
     """주문과-잔고처리::모의투자 환경"""
-    def test40(self):
+    def test30(self):
         pretty_title("""주문과-잔고처리::모의투자 환경""")
 
         if GetServerGubun() == '모의':
@@ -299,7 +304,7 @@ class MainTester(QObject):
             print("주문과-잔고처리 -----> 모의투자 환경에서만 테스트해라!!!")
 
     """주문과-잔고처리::실전투자 환경"""
-    def test41(self):
+    def test31(self):
         pretty_title("""주문과-잔고처리::실전투자 환경""")
 
         self._trcode = 'KOA_NORMAL_BUY_KP_ORD'
