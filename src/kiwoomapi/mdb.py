@@ -37,11 +37,13 @@ class MemoryDB(object):
         data = FileReader.read_json(filepath)
         # pp.pprint(data)
         return data
+    
     def _setup_model(self):
         data = self._load_file(self.modelName)
         df = pd.DataFrame(data)
         dic = df.to_dict('tight')
         self.schemaCols = dic['columns']
+    
     def _create_model(self):
         data = self._load_file(self.modelName)
         df = pd.DataFrame(data)
@@ -74,6 +76,7 @@ class MemoryDB(object):
         # pp.pprint(data)
         df = pd.DataFrame(data, columns=self.schemaCols)
         return df.to_dict('records')
+    
     def select(self, filter):
         for k, v in filter.items(): break 
         query = f"SELECT * FROM {self.modelName} WHERE {k} == '{v}'"
@@ -92,14 +95,29 @@ class MemoryDB(object):
         data = [tpls]
         df = pd.DataFrame(data, columns=self.schemaCols)
         return df.to_dict('records')[0]
+    
     def view(self):
         data = self.select_all()
         return pd.DataFrame(data)
 
 
 
-CALL_PRICE_UNIT_DATA = MemoryDB('CallPriceUnit').select_all()
-def callprcunit(prc):
-    for d in CALL_PRICE_UNIT_DATA:
-        if d['left'] <= prc < d['right']: return d['unit']
-        else: pass
+
+CALL_PRICE_UNIT_DATA = [
+    {"unit": 1, "left": 0, "right": 2000,},
+    {"unit": 5, "left": 2000, "right": 5000},
+    {"unit": 10, "left": 5000, "right": 20000},
+    {"unit": 50, "left": 20000, "right": 50000},
+    {"unit": 100, "left": 50000, "right": 200000},
+    {"unit": 500, "left": 200000, "right": 500000},
+    {"unit": 1000, "left": 500000, "right": 10000000},
+]
+
+
+from kiwoomapi.metadata import ErrorCode
+
+
+ErrorCodeMDB = {}
+for d in ErrorCode.data:
+    key = str(d['code'])
+    ErrorCodeMDB.update({key: d['msg']})

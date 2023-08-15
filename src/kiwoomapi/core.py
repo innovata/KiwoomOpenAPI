@@ -14,6 +14,9 @@ from ipylib.idebug import *
 from ipylib import idatetime
 
 
+from kiwoomapi import mdb
+
+
 
 
 OpenAPI = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
@@ -53,8 +56,8 @@ def dynamicCall(*args):
             else:
                 # 에러발생
                 errCode = v
-                msg = ''
-                logger.error([errCode, {'args': args}])
+                msg = mdb.ErrorCodeMDB[str(errCode)]
+                logger.error([(errCode, msg), {'args': args}])
             return v
         elif isinstance(v, str):
             return v
@@ -320,11 +323,11 @@ def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
 """MY-FunctionalAPIs"""
 ############################################################
 
-from kiwoomapi import const 
+from kiwoomapi import mdb 
 
 """종목가격의 해당 동적 호가단위"""
 def CallPriceUnit(prc):
-    for d in const.CallPriceUnit:
+    for d in mdb.CALL_PRICE_UNIT_DATA:
         if d['left'] <= prc < d['right']: 
             return d['unit']
         
