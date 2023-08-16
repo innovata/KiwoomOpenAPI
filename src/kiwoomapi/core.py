@@ -247,9 +247,8 @@ def SendCondition(ScrNo, ConditionName, Index, Search=1):
 
 @ftracer 
 def SendConditionStop(ScrNo, ConditionName, Index):
-    v = dynamicCall('SendCondition(QString,QString,int)', 
+    return dynamicCall('SendCondition(QString,QString,int)', 
                     ScrNo, ConditionName, Index)
-    return v
 
 @ftracer
 def SetRealReg(ScrNo, CodeList, FidList, OptType='1'):
@@ -302,7 +301,8 @@ def SetInputValue(ID, Value):
 ############################################################
 # @ftracer
 def GetChejanData(Fid):
-    return dynamicCall('GetChejanData(int)', Fid)
+    v = dynamicCall('GetChejanData(int)', Fid)
+    return v.strip()
 
 @ftracer
 def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
