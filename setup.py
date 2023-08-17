@@ -4,6 +4,18 @@ import setuptools
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+
+with open("requirements.txt", "r", encoding="utf-8") as f:
+    text = f.read().strip()
+    f.close()
+    packages = text.split('\n')
+    INSTALL_REQUIRES = [pack.strip() for pack in packages if len(pack.strip()) > 0]
+
+
+PROJECT_PACKAGE_DIR = 'src'
+
+
+
 setuptools.setup(
     name="kiwoomapi",
     version="0.5.3",
@@ -18,10 +30,9 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    package_dir={"":"src"},
-    packages=setuptools.find_packages('src'),
+    package_dir={"": PROJECT_PACKAGE_DIR},
+    packages=setuptools.find_packages(PROJECT_PACKAGE_DIR),
     python_requires=">=3.8",
-    install_requires=[
-        'PyQt5', 'ipylib',
-    ],
+    install_requires=INSTALL_REQUIRES,
 )
+
