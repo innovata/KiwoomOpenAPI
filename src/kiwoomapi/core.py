@@ -60,7 +60,7 @@ def dynamicCall(*args):
                 logger.error([(errCode, msg), {'args': args}])
             return v
         elif isinstance(v, str):
-            return v
+            return v.strip()
         else:
             return None 
 
@@ -121,7 +121,7 @@ def GetMasterConstruction(code):
 # @ftracer
 def GetMasterLastPrice(code):
     v = dynamicCall('GetMasterLastPrice(QString)', code)
-    return int(v.strip())
+    return int(v)
 
 """상장일"""
 # @ftracer
@@ -175,8 +175,7 @@ def GetUpjongCode(ujcd):
 """업종이름"""
 @ftracer
 def GetUpjongNameByCode(ujcd): 
-    v = KOA_Functions('GetUpjongNameByCode', ujcd)
-    return v.strip()
+    return KOA_Functions('GetUpjongNameByCode', ujcd)
 
 """ETF 투자유의 종목 여부"""
 # @ftracer
@@ -243,6 +242,7 @@ def SendCondition(ScrNo, ConditionName, Index, Search=1):
     t = datetime.now()
     if t.weekday() in [5,6]:
         logger.warning(['주말 또는 장중이 아니면 실패처리된다'])
+    
     return v
 
 @ftracer 
@@ -272,9 +272,8 @@ def CommRqData(RQName, TrCode, PrevNext, ScrNo):
 
 # @ftracer
 def GetCommData(TrCode, RecordName, Index, ItemName):
-    v = dynamicCall('GetCommData(QString,QString,int,QString)', 
+    return dynamicCall('GetCommData(QString,QString,int,QString)', 
                     TrCode, RecordName, Index, ItemName)
-    return v.strip()
 
 @ftracer
 def GetCommDataEx(TrCode, RecordName):
@@ -282,8 +281,7 @@ def GetCommDataEx(TrCode, RecordName):
 
 # @ftracer
 def GetCommRealData(Code, Fid):
-    v = dynamicCall('GetCommRealData(QString,QString)', Code, Fid)
-    return v.strip()
+    return dynamicCall('GetCommRealData(QString,int)', Code, Fid)
 
 @ftracer
 def GetRepeatCnt(TrCode, RQName):
@@ -301,8 +299,7 @@ def SetInputValue(ID, Value):
 ############################################################
 # @ftracer
 def GetChejanData(Fid):
-    v = dynamicCall('GetChejanData(int)', Fid)
-    return v.strip()
+    return dynamicCall('GetChejanData(int)', Fid)
 
 @ftracer
 def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
