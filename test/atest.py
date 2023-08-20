@@ -53,8 +53,8 @@ class MainTester(QObject):
         self.LoginSucceeded.emit()
 
     def __run_test__(self):
-        # self.test41()
-        self.__run_many__()
+        self.test00()
+        # self.__run_many__()
 
     def __run_many__(self):
         for i in range(1, 50):
@@ -66,6 +66,55 @@ class MainTester(QObject):
             else:
                 testFunc()
                 sleep(2)
+
+
+    ############################################################
+    """QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")"""
+    ############################################################
+
+    def test00(self):
+        pp.pprint(OpenAPI.__dict__)
+        print(dir(OpenAPI))
+
+        v = OpenAPI.GetConnectState()
+        print(['GetConnectState', type(v), v])
+
+        v = OpenAPI.GetBranchCodeName()
+        print(['GetConnectState', type(v), v])
+
+        v = OpenAPI.GetCodeListByMarket('0')
+        print(['GetCodeListByMarket', type(v), v])
+
+        v = OpenAPI.GetMasterCodeName(isscode)
+        print(['GetMasterCodeName', type(v), v])
+
+        v = OpenAPI.GetMasterConstruction(isscode)
+        print(['GetMasterConstruction', type(v), v])
+
+        v = OpenAPI.GetMasterLastPrice(isscode)
+        print(['GetMasterLastPrice', type(v), v])
+
+        v = OpenAPI.GetMasterListedStockDate(isscode)
+        print(['GetMasterListedStockDate', type(v), v])
+
+        v = OpenAPI.GetMasterListedStockCnt(isscode)
+        print(['GetMasterListedStockCnt', type(v), v])
+
+        v = OpenAPI.GetMasterStockState(isscode)
+        print(['GetMasterStockState', type(v), v])
+
+
+        v = OpenAPI.KOA_Functions('GetServerGubun', '')
+        print(['GetServerGubun', type(v), v])
+
+        v = OpenAPI.KOA_Functions('GetUpjongNameByCode', '002')
+        print(['GetUpjongNameByCode', type(v), v])
+
+
+
+    ############################################################
+    """FunctionalAPIs::로그인-버전처리"""
+    ############################################################
 
     """로그인-버전처리"""
     def test01(self):

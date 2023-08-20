@@ -22,11 +22,12 @@ from kiwoomapi import mdb
 OpenAPI = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
 
 
+
 def dynamicCall(*args): 
     funcExp = args[0]
     params = list(args[1:])
 
-    # 데이터타입 발라내기
+    """데이타 타입 적용 파싱"""
     m = re.search('\((.+)\)', funcExp)
     if m is None: 
         pass 
@@ -43,26 +44,26 @@ def dynamicCall(*args):
 
         params = _params.copy()
     
-    try:
-        v = OpenAPI.dynamicCall(funcExp, params)
-    except Exception as e:
-        logger.error([e, {'args': args}])
-    else:
-        # 오류코드 안내 적용
-        if isinstance(v, int):
-            if v >= 0:
-                # 정상호출
-                pass 
-            else:
-                # 에러발생
-                errCode = v
-                msg = mdb.ErrorCodeMDB[str(errCode)]
-                logger.error([(errCode, msg), {'args': args}])
-            return v
-        elif isinstance(v, str):
-            return v.strip()
+    # 입력값의 데이터타입 오류시, 프로그램은 오작동하고 죽는다.
+    # 따라서, try 구분은 불필요하다
+    v = OpenAPI.dynamicCall(funcExp, params)
+
+    """오류코드 안내 적용"""
+    if isinstance(v, int):
+        errCode = v
+        msg = mdb.ErrorCodeMDB[str(errCode)]
+        if v >= 0:
+            # 정상호출
+            # pass 
+            logger.debug([(errCode, msg), {'args': args}])
         else:
-            return None 
+            # 에러발생
+            logger.error([(errCode, msg), {'args': args}])
+        return v
+    elif isinstance(v, str):
+        return v.strip()
+    else:
+        return None 
 
 # @ftracer
 def KOA_Functions(func, param): 
@@ -158,6 +159,7 @@ def GetServerGubun():
     v = KOA_Functions('GetServerGubun', "")
     return '모의' if v == '1' else '실전'
 
+
 """업종코드목록"""
 @ftracer
 def GetUpjongCode(ujcd):
@@ -217,7 +219,7 @@ def ShowAccountWindow(): return KOA_Functions('ShowAccountWindow', "")
 
 
 ############################################################
-"""FunctionalAPIs::조건검색"""
+"""조건검색"""
 ############################################################
 @ftracer
 def GetConditionLoad(): return dynamicCall('GetConditionLoad()')
@@ -263,7 +265,7 @@ def SetRealRemove(ScrNo='ALL', DelCode='ALL'):
 
 
 ############################################################
-"""FunctionalAPIs::조회와-실시간데이터처리"""
+"""조회와-실시간데이터처리"""
 ############################################################
 @ftracer
 def CommRqData(RQName, TrCode, PrevNext, ScrNo):
@@ -295,7 +297,7 @@ def SetInputValue(ID, Value):
 
 
 ############################################################
-"""FunctionalAPIs::주문과-잔고처리"""
+"""주문과-잔고처리"""
 ############################################################
 # @ftracer
 def GetChejanData(Fid):
@@ -303,13 +305,10 @@ def GetChejanData(Fid):
 
 @ftracer
 def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
-    try:
-        return dynamicCall(
-            'SendOrder(QString,QString,QString,int,QString,int,int,QString,QString)',
-            RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo
-        )
-    except Exception as e:
-        logger.error(e)
+    return dynamicCall(
+        'SendOrder(QString,QString,QString,int,QString,int,int,QString,QString)',
+        RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo
+    )
 
 
 
