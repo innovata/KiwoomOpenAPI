@@ -1,0 +1,14 @@
+{"code": "00", "name": "지정가", "real_active": true, "test_active": true}
+{"code": "03", "name": "시장가", "real_active": true, "test_active": true}
+{"code": "05", "name": "조건부지정가", "real_active": true, "test_active": true}
+{"code": "06", "name": "최유리지정가", "real_active": true, "test_active": true}
+{"code": "07", "name": "최우선지정가", "real_active": true, "test_active": true}
+{"code": "10", "name": "지정가IOC", "real_active": true, "test_active": true}
+{"code": "13", "name": "시장가IOC", "real_active": true, "test_active": true}
+{"code": "16", "name": "최유리IOC", "real_active": true, "test_active": false}
+{"code": "20", "name": "지정가FOK", "real_active": true, "test_active": true}
+{"code": "23", "name": "시장가FOK", "real_active": true, "test_active": true}
+{"code": "26", "name": "최유리FOK", "real_active": true, "test_active": false}
+{"code": "61", "name": "장전시간외종가", "real_active": true, "test_active": false}
+{"code": "62", "name": "시간외단일가매매", "real_active": true, "test_active": false}
+{"code": "81", "name": "장후시간외종가", "real_active": true, "test_active": false}

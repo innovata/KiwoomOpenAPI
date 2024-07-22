@@ -1,0 +1,6 @@
+{"code": 1, "name": "신규매수", "supported": true}
+{"code": 2, "name": "신규매도", "supported": true}
+{"code": 3, "name": "매수취소", "supported": true}
+{"code": 4, "name": "매도취소", "supported": true}
+{"code": 5, "name": "매수정정", "supported": false}
+{"code": 6, "name": "매도정정", "supported": false}

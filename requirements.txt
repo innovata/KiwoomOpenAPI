@@ -1,6 +1,6 @@
+ipykernel 
+
 PyQt5==5.15.1
-
-
-ipylib
+requests
 
 

@@ -6,7 +6,7 @@ from ipylib.datacls import BaseDataClass
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QEventLoop
 
 
-from kiwoomapi.core import *
+from kiwoomapi_v2.core import *
 
 
 issname, isscode = '삼성전자', '005930'

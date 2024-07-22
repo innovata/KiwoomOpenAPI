@@ -14,7 +14,7 @@ from ipylib.idebug import *
 from ipylib import idatetime
 
 
-from kiwoomapi import mdb
+from kiwoomapi_v2 import mdb
 
 
 
@@ -319,7 +319,7 @@ def SendOrder(RQName,ScrNo,AccNo,OrderType,Code,Qty,Price,HogaGb,OrgOrderNo=''):
 """MY-FunctionalAPIs"""
 ############################################################
 
-from kiwoomapi import mdb 
+from kiwoomapi_v2 import mdb 
 
 """종목가격의 해당 동적 호가단위"""
 def CallPriceUnit(prc):

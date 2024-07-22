@@ -1,0 +1,7 @@
+{"unit": 1, "left": 0, "right": 2000}
+{"unit": 5, "left": 2000, "right": 5000}
+{"unit": 10, "left": 5000, "right": 20000}
+{"unit": 50, "left": 20000, "right": 50000}
+{"unit": 100, "left": 50000, "right": 200000}
+{"unit": 500, "left": 200000, "right": 500000}
+{"unit": 1000, "left": 500000, "right": 10000000}

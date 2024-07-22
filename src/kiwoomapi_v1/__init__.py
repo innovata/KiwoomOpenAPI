@@ -29,7 +29,7 @@ from pyqtclass import QBaseObject
 # from configuration import CONFIG
 
 
-from openapi.metadata import __TRItem__, __RTList__, __RealFID__
+from kiwoomapi_v1.metadata import __TRItem__, __RTList__, __RealFID__
 
 
 

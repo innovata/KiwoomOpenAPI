@@ -114,7 +114,7 @@ CALL_PRICE_UNIT_DATA = [
 ]
 
 
-from kiwoomapi.metadata import ErrorCode
+from kiwoomapi_v2._metadata import ErrorCode
 
 
 ErrorCodeMDB = {}
