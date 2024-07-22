@@ -160,38 +160,35 @@ class MarketTime:
         return text 
 
 
-"""개별 파서 보유"""
-class ParserTypeC:
-    TRList = TRList
-    RTList = RTList
-    ChejanFID = ChejanFID
-    MarketTime = MarketTime
+# """개별 파서 보유"""
+# class ParserTypeC:
+#     TRList = TRList
+#     RTList = RTList
+#     ChejanFID = ChejanFID
+#     MarketTime = MarketTime
 
-    @classmethod
-    def get(self, modelName): return getattr(self, modelName)()
+#     @classmethod
+#     def get(self, modelName): return getattr(self, modelName)()
 
 
 
 MODEL_PARSERS = {
-    'ChejanFID': ParserTypeC,
-    'ErrorCode': ParserTypeB,
     'HogaGubun': ParserTypeA,
     'MarketGubun': ParserTypeA,
     'MarketOptGubun': ParserTypeA,
     'OrderType': ParserTypeA,
-    'RTList': ParserTypeC,
-    'TRList': ParserTypeC,
-    'MarketTime': ParserTypeC,
+    'ErrorCode': ParserTypeB,
+    'RTList': RTList,
+    'TRList': TRList,
+    'ChejanFID': ChejanFID,
+    'MarketTime': MarketTime,
 }
 
 
 
 def get_parser(modelName):
     if modelName in MODEL_PARSERS:
-        parser = MODEL_PARSERS[modelName]()
-        if isinstance(parser, ParserTypeC):
-            parser = parser.get(modelName)
-        return parser 
+        return MODEL_PARSERS[modelName]()
     else:
         # logger.error(['해당모델의 파서는 없다. modelName:', modelName])
         print(['해당모델의 파서는 없다. modelName:', modelName])
